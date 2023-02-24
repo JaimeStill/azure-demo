@@ -1,5 +1,12 @@
 # Notes
 
+Demonstrate:
+
+* [Containerized App Service](https://github.com/JaimeStill/learning-azure/tree/main/exercises/app-service/02-app-service-containerized)
+* [Key Vault](https://github.com/JaimeStill/learning-azure/tree/main/exercises/key-vault/01-manage-secrets)
+* [CLI to API](https://github.com/JaimeStill/learning-azure/tree/main/exercises/azure-ad/02-msal-protect-web-api)
+* [SPA to API](https://github.com/JaimeStill/learning-azure/tree/main/exercises/azure-ad/04-spa-to-api)
+
 ```bash
 # build the image
 docker build -t {tag} .
