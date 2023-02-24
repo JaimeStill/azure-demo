@@ -4,17 +4,14 @@ kv=arma-demo-vault
 acr=armaregistry
 ad-app=demo-api
 scopeId=$(uuidgen)
+api-1=primary-api
+api-2=secondary-api
+
 
 # Resource Group
 az group create \
     --name $rg \
     --location eastus
-
-# Key Vault
-az keyvault create \
-    --resource-group $rg \
-    --location eastus \
-    --name $kv
 
 # ACR
 az acr create \
@@ -34,6 +31,31 @@ ACR_PW=$(az acr credential show \
     --name $acr \
     --query "passwords[0].value" \
     --output tsv)
+
+# Build Docker images with ACR
+
+az acr build \
+    --registry $acr \
+    --image $api-1 \
+    ../src/$api-1
+
+az acr build \
+    --registry $acr \
+    --image $api-2 \
+    ../src/$api-2
+
+# App Service
+
+# Key Vault
+az keyvault create \
+    --resource-group $rg \
+    --location eastus \
+    --name $kv
+
+az keyvault secret set \
+    --name DatabaseConnection \
+    --value "Server=nerual.local;database=neural-db;UID=sa;PWD=P@$$Word1234!@#$;" \
+    --vault-name $kv
 
 # Configure AD App Registration
 appId=$(az ad app create \
@@ -67,10 +89,17 @@ az ad app update \
     --identifier-uris api://$appId \
     --set api="$api"
 
-# Add AzureAd config to appsettings
+# Add AzureAd config to appsettings in APIs
 jq '.AzureAd += {
     "Instance": "https://login.microsoftonline.com/",
     "Domain": "qualified.domain.name",
     "ClientId": "$appId",
     "TenantId": "common"
-}' ../src/demo/demo-api/appsettings.json > "tmp" && mv "tmp" ../src/demo/demo-api/appsettings.json
+}' ../src/$api-1/appsettings.json > "tmp" && mv "tmp" ../src/$api-1/appsettings.json
+
+jq '.AzureAd += {
+    "Instance": "https://login.microsoftonline.com/",
+    "Domain": "qualified.domain.name",
+    "ClientId": "$appId",
+    "TenantId": "common"
+}' ../src/$api-2/appsettings.json > "tmp" && mv "tmp" ../src/$api-2/appsettings.json
