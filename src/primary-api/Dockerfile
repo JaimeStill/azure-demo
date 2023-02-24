@@ -1,19 +1,12 @@
-FROM mcr.microsoft.com/dotnet/aspnet:7.0 AS base
+FROM mcr.microsoft.com/dotnet/sdk:7.0 AS base
 WORKDIR /app
-EXPOSE 80
 
-FROM mcr.microsoft.com/dotnet/sdk:7.0 AS build
-WORKDIR /src
-COPY ["Primary.csproj", "Primary/"]
-RUN dotnet restore "Primary.csproj"
 COPY . .
-WORKDIR "/src/Primary"
-RUN dotnet build "Primary.csproj" -c Release -o /app
+RUN dotnet restore
+RUN dotnet publish -c Release -o out
 
-FROM build AS publish
-RUN dotnet publish "Primary.csproj" -c Release -o /app
-
-FROM base AS final
+FROM mcr.microsoft.com/dotnet/aspnet:7.0
 WORKDIR /app
-COPY --from=publish /app .
+COPY --from=base /app/out .
+EXPOSE 80
 ENTRYPOINT ["dotnet", "Primary.dll"]
