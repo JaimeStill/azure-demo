@@ -1,13 +1,5 @@
-# Initialized Variables
-rg=arma-demo-rg
-kv=arma-demo-vault
-acr=armaregistry
-ad-app=demo-api
-scopeId=$(uuidgen)
-appPlan=demo-app-plan
-api1=primary-api
-api2=secondary-api
-
+# Initialize variables
+. ./init-variables.sh
 
 # Resource Group
 az group create \
@@ -20,6 +12,9 @@ az acr create \
     --name $acr \
     --sku Standard \
     --admin-enabled true
+
+# Admin Details in:
+# Container Registries -> Registry -> Access keys
 
 # Set ACR Admin
 ACR_ADMIN=$(az acr credential show \
@@ -53,58 +48,58 @@ az appservice plan create \
 
 ## App Services
 az webapp create \
-    --name $app1 \
+    --name $api1 \
     --plan $appPlan \
     --resource-group $rg \
     --docker-registry-server-user $ACR_ADMIN \
     --docker-registry-server-password $ACR_PW \
-    --deployment-container-image-name $acr.azureacr.io/$app1:latest
+    --deployment-container-image-name $acr.azureacr.io/$api1:latest
 
 az webapp create \
-    --name $app2 \
+    --name $api2 \
     --plan $appPlan \
     --resource-group $rg \
     --docker-registry-server-user $ACR_ADMIN \
     --docker-registry-server-password $ACR_PW \
-    --deployment-container-image-name $acr.azureacr.io/$app2:latest
+    --deployment-container-image-name $acr.azureacr.io/$api2:latest
 
 # Configure Continuous Deployment
 az webapp deployment container config \
-    --resoruce-group $rg \
-    --name $app1 \
+    --resource-group $rg \
+    --name $api1 \
     --enable-cd true
 
 az webapp deployment container config \
     --resource-group $rg \
-    --name $app2 \
+    --name $api2 \
     --enable-cd true
 
 # Configure ACR CD Webhooks
 PRIMARY_WEBHOOK=$(az webapp deployment container show-cd-url \
     --resource-group $rg \
-    --name $app1 \
+    --name $api1 \
     --query "CI_CD_URL" \
     --output tsv
 )
 
 SECONDARY_WEBHOOK=$(az webapp deployment container show-cd-url \
     --resource-group $rg \
-    --name $app2 \
+    --name $api2 \
     --query "CI_CD_URL" \
     --output tsv
 )
 
-az acr webook create \
+az acr webhook create \
     --resource-group $rg \
-    --regisry $acr \
-    --name deploy-$app1 \
+    --registry $acr \
+    --name $hook1 \
     --uri $PRIMARY_WEBHOOK \
     --actions push
 
 az acr webhook create \
     --resource-group $rg \
     --registry $acr \
-    --name deploy-$app2 \
+    --name $hook2 \
     --uri $SECONDARY_WEBHOOK \
     --actions push
 
@@ -116,41 +111,41 @@ az keyvault create \
 
 az keyvault secret set \
     --name DatabaseConnection \
-    --value "Server=nerual.local;database=neural-db;UID=sa;PWD=P@$$Word1234!@#$;" \
+    --value 'Server=neural.local;database=neural-db;UID=sa;PWD=P@$$Word1234!@#$;' \
     --vault-name $kv
 
 # Add Key Vault to App Service settings
 
 az webapp config appsettings set \
     --resource-group $rg \
-    --name $app1 \
+    --name $api1 \
     --settings "VaultName=$kv"
 
 az webapp config appsettings set \
     --resource-group $rg \
-    --name $app2 \
+    --name $api2 \
     --settings "VaultName=$kv"
 
 # Enable Web App Managed Identity
 az webapp identity assign \
     --resource-group $rg \
-    --name $app1
+    --name $api1
 
 az webapp identity assign \
     --resource-group $rg \
-    --name $app2
+    --name $api2
 
 # Grant Key Vault Access
 
 PRIMARY_PRINCIPAL=$(az webapp identity show \
     --resource-group $rg \
-    --name $app1 \
+    --name $api1 \
     --query principalId \
     --output tsv)
 
 SECONDARY_PRINCIPAL=$(az webapp identity show \
     --resource-group $rg \
-    --name $app2 \
+    --name $api2 \
     --query principalId \
     --output tsv)
 
@@ -176,7 +171,7 @@ jq '. += {
 
 # Configure AD App Registration
 appId=$(az ad app create \
-    --display-name $ad-app \
+    --display-name $adApp \
     --public-client-redirect-uris http://localhost \
     --is-fallback-public-client true \
     --query appId \
