@@ -19,10 +19,5 @@ azAdSpaId=$(az ad app list \
     --output tsv \
 | tr -d '\r')
 
-if [-n "$azAdAppId"]; then
-    az ad app delete --id $azAdAppId
-fi
-
-if [-n "$azAdSpaId"]; then
-    az ad app delete --id $azAdSpaId
-fi
+az ad app delete --id $azAdAppId
+az ad app delete --id $azAdSpaId
