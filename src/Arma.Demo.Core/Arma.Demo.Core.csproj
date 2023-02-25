@@ -6,6 +6,7 @@
     <PackageId>Arma.Demo.Core</PackageId>
     <Version>0.0.1</Version>
     <Authors>Jaime Still</Authors>
+    <Company>ARMA Global Corporation</Company>
   </PropertyGroup>
 
   <ItemGroup>
