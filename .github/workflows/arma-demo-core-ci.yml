@@ -1,11 +1,6 @@
 name: Ensure Arma.Demo.Core Builds
 
 on:
-  push:
-    branches:
-      - main
-    paths:
-      - src/Arma.Demo.Core/*
   pull_request:
     branches:
       - main
