@@ -22,20 +22,21 @@ az acr create \
 ACR_ADMIN=$(az acr credential show \
     --name $acr \
     --query "username" \
-    --output tsv)
+    --output tsv \
+| tr -d '\r')
 
 # Set ACR Password
 ACR_PW=$(az acr credential show \
     --name $acr \
     --query "passwords[0].value" \
-    --output tsv)
+    --output tsv \
+| tr -d '\r')
 
 # Build Docker images with ACR
 az acr build \
     --registry $acr \
     --image $api1 \
-    --file ../src/$api1/Dockerfile
-    ../src
+    ../src/$api1
 
 az acr build \
     --registry $acr \
@@ -82,15 +83,15 @@ PRIMARY_WEBHOOK=$(az webapp deployment container show-cd-url \
     --resource-group $rg \
     --name $api1 \
     --query "CI_CD_URL" \
-    --output tsv
-)
+    --output tsv \
+ | tr -d '\r')
 
 SECONDARY_WEBHOOK=$(az webapp deployment container show-cd-url \
     --resource-group $rg \
     --name $api2 \
     --query "CI_CD_URL" \
-    --output tsv
-)
+    --output tsv \
+ | tr -d '\r')
 
 az acr webhook create \
     --resource-group $rg \
@@ -139,18 +140,23 @@ az webapp identity assign \
     --name $api2
 
 # Grant Key Vault Access
-
+# tr -d '\r' required for WSL use
+# results were coming back with a ghost \r
+# the resulting set-policy calls would error
+# with an invalid ObjectId message
 PRIMARY_PRINCIPAL=$(az webapp identity show \
     --resource-group $rg \
     --name $api1 \
     --query principalId \
-    --output tsv)
+    --output tsv \
+| tr -d '\r')
 
 SECONDARY_PRINCIPAL=$(az webapp identity show \
     --resource-group $rg \
     --name $api2 \
     --query principalId \
-    --output tsv)
+    --output tsv \
+| tr -d '\r')
 
 az keyvault set-policy \
     --name $kv \
@@ -176,12 +182,14 @@ apiAppId=$(az ad app create \
     --display-name $adApiApp \
     --sign-in-audience AzureADMyOrg \
     --query appId \
-    --output tsv)
+    --output tsv \
+| tr -d '\r')
 
 apiObjectId=$(az ad app show \
     --id $apiAppId \
     --query id \
-    --output tsv)
+    --output tsv \
+| tr -d '\r')
 
 # Configure delegated OAuth permissions
 read=$(echo '{
@@ -248,6 +256,18 @@ identifierUris=$(echo '"identifierUris": [
     "api://'$apiAppId'"
 ]')
 
+# Optional Claims
+optionalClaims=$(echo '"optionalClaims": {
+    "accessToken": [
+        {
+            "additionalProperties": [],
+            "essential": false,
+            "name": "idtyp",
+            "source": null
+        }
+    ]
+}')
+
 # Compose API App Configuration and update App Registration
 apiBody=$(echo '{
     '$api',
@@ -266,14 +286,14 @@ az rest \
 jq '.AzureAd += {
     "Instance": "https://login.microsoftonline.com/",
     "Domain": "qualified.domain.name",
-    "ClientId": "$apiAppId",
+    "ClientId": "'$apiAppId'",
     "TenantId": "'$tenantId'"
 }' ../src/$api1/appsettings.json > "tmp" && mv "tmp" ../src/$api1/appsettings.json
 
 jq '.AzureAd += {
     "Instance": "https://login.microsoftonline.com/",
     "Domain": "qualified.domain.name",
-    "ClientId": "$apiAppId",
+    "ClientId": "'$apiAppId'",
     "TenantId": "'$tenantId'"
 }' ../src/$api2/appsettings.json > "tmp" && mv "tmp" ../src/$api2/appsettings.json
 
@@ -282,12 +302,14 @@ spaAppId=$(az ad app create \
     --display-name $adSpaApp \
     --sign-in-audience AzureADMyOrg \
     --query appId \
-    --output tsv)
+    --output tsv \
+| tr -d '\r')
 
 spaObjectId=$(az ad app show \
     --id $spaAppId \
     --query id \
-    --output tsv)
+    --output tsv \
+| tr -d '\r')
 
 # Configure API Permissions
 requiredResourceAccess=$(echo '"requiredResourceAccess": [
@@ -315,7 +337,6 @@ spa=$(echo '"spa": {
 }')
 
 # Compose API App Configuration and update App Registration
-
 spaBody=$(echo '{
     '$requiredResourceAccess',
     '$spa'
