@@ -3,23 +3,6 @@
 # Initialize variables
 . init-variables.sh
 
-echo 'Variables:'
-echo "rg: $rg"
-echo "kv: $kv"
-echo "acr: $acr"
-echo "appPlan: $appPlan"
-echo "api1: $api1"
-echo "api2: $api2"
-echo "hook1: $hook1"
-echo "hook2: $hook2"
-echo "adApiApp: $adApiApp"
-echo "adSpaApp: $adSpaApp"
-echo "readId: $readId"
-echo "readWriteId: $readWriteId"
-echo "appReadId: $appReadId"
-echo "appReadWriteId: $appReadWriteId"
-echo "tenantId: $tenantId"
-
 # Resource Group
 az group create \
     --name $rg \
@@ -51,7 +34,8 @@ ACR_PW=$(az acr credential show \
 az acr build \
     --registry $acr \
     --image $api1 \
-    ../src/$api1
+    --file ../src/$api1/Dockerfile
+    ../src
 
 az acr build \
     --registry $acr \
@@ -328,7 +312,7 @@ spa=$(echo '"spa": {
         "http://localhost:4200/",
         "http://localhost:4200/auth"
     ]
-}'
+}')
 
 # Compose API App Configuration and update App Registration
 
