@@ -1,6 +1,6 @@
 using Azure.Identity;
 
-namespace Primary.Configuration;
+namespace Core.Configuration;
 
 public static class KeyVaultExtensions
 {

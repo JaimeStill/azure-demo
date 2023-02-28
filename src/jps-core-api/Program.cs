@@ -1,7 +1,7 @@
 using System.Text.Json;
 using System.Text.Json.Serialization;
 using Arma.Demo.Core.Middleware;
-using Primary.Configuration;
+using Core.Configuration;
 
 var builder = WebApplication.CreateBuilder(args);
 

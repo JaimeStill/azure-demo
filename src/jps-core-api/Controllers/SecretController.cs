@@ -1,7 +1,7 @@
 using System.Text.Json;
 using Microsoft.AspNetCore.Mvc;
 
-namespace Primary.Controllers;
+namespace Core.Controllers;
 
 struct SecretResult
 {
