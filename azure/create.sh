@@ -68,7 +68,7 @@ az webapp create \
     --resource-group $rg \
     --docker-registry-server-user $ACR_ADMIN \
     --docker-registry-server-password $ACR_PW \
-    --deployment-container-image-name $acr.azureacr.io/$api1:latest
+    --deployment-container-image-name $acr.azurecr.io/$api1:latest
 
 az webapp create \
     --name $api2 \
@@ -76,7 +76,7 @@ az webapp create \
     --resource-group $rg \
     --docker-registry-server-user $ACR_ADMIN \
     --docker-registry-server-password $ACR_PW \
-    --deployment-container-image-name $acr.azureacr.io/$api2:latest
+    --deployment-container-image-name $acr.azurecr.io/$api2:latest
 
 # Configure Continuous Deployment
 az webapp deployment container config \
