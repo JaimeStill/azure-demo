@@ -8,6 +8,17 @@ az group create \
     --name $rg \
     --location eastus
 
+# Key Vault
+az keyvault create \
+    --resource-group $rg \
+    --location eastus \
+    --name $kv
+
+az keyvault secret set \
+    --name DatabaseConnection \
+    --value 'Server=neural.local;database=neural-db;UID=sa;PWD=P@$$Word1234!@#$;' \
+    --vault-name $kv
+
 # ACR
 az acr create \
     --resource-group $rg \
@@ -106,17 +117,6 @@ az acr webhook create \
     --name $hook2 \
     --uri $SECONDARY_WEBHOOK \
     --actions push
-
-# Key Vault
-az keyvault create \
-    --resource-group $rg \
-    --location eastus \
-    --name $kv
-
-az keyvault secret set \
-    --name DatabaseConnection \
-    --value 'Server=neural.local;database=neural-db;UID=sa;PWD=P@$$Word1234!@#$;' \
-    --vault-name $kv
 
 # Add Key Vault to App Service settings
 
