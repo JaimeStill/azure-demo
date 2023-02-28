@@ -1,0 +1,94 @@
+using Microsoft.Extensions.Configuration;
+using Microsoft.Identity.Client;
+
+namespace CloudCli.Commands;
+class AuthSettings
+{
+    public string? ClientId { get; set; }
+    public string? TenantId { get; set; }
+    public string[]? Scopes { get; set; }
+}
+
+public class AuthCommand : CliCommand
+{
+    public AuthCommand() : base(
+        "auth",
+        "Demonstrate Azure AD API Authentication / Authorization",
+        new Action<string>(
+            async (server) => await Call(server)
+        )
+    ) { }
+
+    static async Task Call(string server)
+    {
+        Console.WriteLine("Retrieving Auth Settings...");
+        IConfiguration config = BuildConfiguration();
+
+        AuthSettings? settings = config
+            .GetSection("AuthSettings")
+            .Get<AuthSettings>();
+
+        if (settings is null)
+            throw new Exception("AuthSettings is missing from configuration");
+
+        Console.WriteLine("Initializing Public Client Application...");
+        IPublicClientApplication app = BuildClientApp(settings);
+
+        Console.WriteLine("Authenticating...");
+
+        AuthenticationResult result = await Authenticate(app, settings);
+
+        Console.WriteLine("Calling Restricted API Endpoint...");
+        HttpClient client = new();
+        client.DefaultRequestHeaders.Authorization = new("Bearer", result.AccessToken);
+
+        HttpResponseMessage response = await client.GetAsync($"{server}/api/auth");
+        Console.WriteLine(await response.Content.ReadAsStringAsync());
+    }
+
+    static IConfiguration BuildConfiguration() =>
+        new ConfigurationBuilder()
+            .AddJsonFile("appsettings.json")
+            .AddEnvironmentVariables()
+            .Build();
+
+    static IPublicClientApplication BuildClientApp(AuthSettings settings) =>
+        PublicClientApplicationBuilder
+            .Create(settings.ClientId)
+            .WithAuthority(AzureCloudInstance.AzurePublic, settings.TenantId)
+            .WithDefaultRedirectUri()
+            .Build();
+
+    static async Task<AuthenticationResult> Authenticate(IPublicClientApplication app, AuthSettings settings)
+    {
+        try
+        {
+            var accounts = await app.GetAccountsAsync();
+
+            return await app
+                .AcquireTokenSilent(settings.Scopes, accounts.FirstOrDefault())
+                .ExecuteAsync();
+        }
+        catch (MsalUiRequiredException)
+        {
+            return await AuthenticateInteractive(app, settings);
+        }
+    }
+
+    static async Task<AuthenticationResult> AuthenticateInteractive(IPublicClientApplication app, AuthSettings settings)
+    {
+        try
+        {
+            AuthenticationResult result = await app
+                .AcquireTokenInteractive(settings.Scopes)
+                .ExecuteAsync();
+
+            return result;
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine(ex.Message);
+            throw;
+        }
+    }
+}

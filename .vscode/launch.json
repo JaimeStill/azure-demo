@@ -1,0 +1,29 @@
+{
+    "version": "0.2.0",
+    "configurations": [
+        {
+            "name": "Debug CloudCLI Auth",
+            "type": "coreclr",
+            "request": "launch",
+            "preLaunchTask": "cli-build",
+            "cwd": "${workspaceFolder}/src/cli",
+            "program": "bin/Debug/net7.0/CloudCli.dll",
+            "stopAtEntry": false,
+            "args": [
+                "auth"
+            ]
+        },
+        {
+            "name": "Debug CloudCLI Secret",
+            "type": "coreclr",
+            "request": "launch",
+            "preLaunchTask": "cli-build",
+            "cwd": "${workspaceFolder}/src/cli",
+            "program": "bin/Debug/net7.0/CloudCli.dll",
+            "stopAtEntry": false,
+            "args": [
+                "secret"
+            ]
+        }
+    ]
+}

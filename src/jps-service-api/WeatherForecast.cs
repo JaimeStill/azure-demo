@@ -1,4 +1,4 @@
-namespace Secondary;
+namespace Service;
 
 public class WeatherForecast
 {
