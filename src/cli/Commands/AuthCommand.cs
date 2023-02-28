@@ -14,7 +14,7 @@ public class AuthCommand : CliCommand
     public AuthCommand() : base(
         "auth",
         "Demonstrate Azure AD API Authentication / Authorization",
-        new Action<string>(
+        new Func<string, Task>(
             async (server) => await Call(server)
         )
     ) { }
