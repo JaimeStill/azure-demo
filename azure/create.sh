@@ -19,6 +19,193 @@ az keyvault secret set \
     --value 'Server=neural.local;database=neural-db;UID=sa;PWD=P@$$Word1234!@#$;' \
     --vault-name $kv
 
+# Configure AD API App Registration
+apiAppId=$(az ad app create \
+    --display-name $adApiApp \
+    --sign-in-audience AzureADMyOrg \
+    --public-client-redirect-uris http://localhost \
+    --is-fallback-public-client true \
+    --query appId \
+    --output tsv \
+| tr -d '\r')
+
+apiObjectId=$(az ad app show \
+    --id $apiAppId \
+    --query id \
+    --output tsv \
+| tr -d '\r')
+
+# Configure delegated OAuth permissions
+read=$(echo '{
+    "adminConsentDescription": "Allow the API to read signed-in users data.",
+    "adminConsentDisplayName": "Read data.",
+    "id": "'$readId'",
+    "isEnabled": true,
+    "type": "User",
+    "userConsentDescription": "Allow the API to read data on your behalf.",
+    "userConsentDisplayName": "Read data as yourself.",
+    "value": "Demo.Read"
+}')
+
+readWrite=$(echo '{
+    "adminConsentDescription": "Allow the API to read and write signed-in users data.",
+    "adminConsentDisplayName": "Read and Write data.",
+    "id": "'$readWriteId'",
+    "isEnabled": true,
+    "type": "User",
+    "userConsentDescription": "Allow the API to read and write data on your behalf.",
+    "userConsentDisplayName": "Read and Write data as yourself.",
+    "value": "Demo.ReadWrite"
+}')
+
+api=$(echo '"api": {
+    "oauth2PermissionScopes": [
+        '$read',
+        '$readWrite'
+    ]
+}')
+
+# Configure API App Roles
+appRead=$(echo '{
+    "allowedMemberTypes": [
+        "Application"
+    ],
+    "description": "Allow this application to read every users data.",
+    "displayName": "Demo.Read.All",
+    "id": "'$appReadId'",
+    "isEnabled": true,
+    "origin": "Application",
+    "value": "Demo.Read.All"
+}')
+
+appReadWrite=$(echo '{
+    "allowedMemberTypes": [
+        "Application"
+    ],
+    "description": "Allow this application to read and write every users data.",
+    "displayName": "Demo.ReadWrite.All",
+    "id": "'$appReadWriteId'",
+    "isEnabled": true,
+    "origin": "Application",
+    "value": "Demo.ReadWrite.All"
+}')
+
+appRoles=$(echo '"appRoles": [
+    '$appRead',
+    '$appReadWrite'
+]')
+
+# Configure API App Identifier URI
+identifierUris=$(echo '"identifierUris": [
+    "api://'$apiAppId'"
+]')
+
+# Optional Claims
+optionalClaims=$(echo '"optionalClaims": {
+    "accessToken": [
+        {
+            "additionalProperties": [],
+            "essential": false,
+            "name": "idtyp",
+            "source": null
+        }
+    ]
+}')
+
+# Compose API App Configuration and update App Registration
+apiBody=$(echo '{
+    '$api',
+    '$appRoles',
+    '$identifierUris',
+    '$optionalClaims'
+}' | jq .)
+
+az rest \
+    --method PATCH \
+    --uri https://graph.microsoft.com/v1.0/applications/$apiObjectId/ \
+    --headers 'Content-Type=application/json' \
+    --body "$apiBody"
+
+# Add appsettings in APIs and CLI
+jq '. += {
+    "AzureAd": {
+        "Instance": "https://login.microsoftonline.com/",
+        "Domain": "qualified.domain.name",
+        "ClientId": "'$apiAppId'",
+        "TenantId": "'$tenantId'"
+    },
+    "VaultName": "'$kv'"
+}' ../src/$api1/appsettings.json > "tmp" && mv "tmp" ../src/$api1/appsettings.json
+
+jq '. += {
+    "AzureAd": {
+        "Instance": "https://login.microsoftonline.com/",
+        "Domain": "qualified.domain.name",
+        "ClientId": "'$apiAppId'",
+        "TenantId": "'$tenantId'"
+    },
+    "VaultName": "'$kv'"
+}' ../src/$api2/appsettings.json > "tmp" && mv "tmp" ../src/$api2/appsettings.json
+
+jq '.AuthSettings += {
+    "ClientId": "'$apiAppId'",
+    "TenantId": "'$tenantId'",
+    "Scopes": [
+        "api://'$apiAppId'/Demo.Read"
+    ]
+}' ../src/$cli/appsettings.json > "tmp" && mv "tmp" ../src/$cli/appsettings.json
+
+# Configure AD SPA App Registration
+spaAppId=$(az ad app create \
+    --display-name $adSpaApp \
+    --sign-in-audience AzureADMyOrg \
+    --query appId \
+    --output tsv \
+| tr -d '\r')
+
+spaObjectId=$(az ad app show \
+    --id $spaAppId \
+    --query id \
+    --output tsv \
+| tr -d '\r')
+
+# Configure API Permissions
+requiredResourceAccess=$(echo '"requiredResourceAccess": [
+    {
+        "resourceAccess": [
+            {
+                "id": "'$appReadId'",
+                "type": "Scope"
+            },
+            {
+                "id": "'$appReadWriteId'",
+                "type": "Scope"
+            }
+        ],
+        "resourceAppId": "'$apiAppId'"
+    }
+]')
+
+# Configure Redirect URIs
+spa=$(echo '"spa": {
+    "redirectUris": [
+        "http://localhost:4200/",
+        "http://localhost:4200/auth"
+    ]
+}')
+
+# Compose API App Configuration and update App Registration
+spaBody=$(echo '{
+    '$requiredResourceAccess',
+    '$spa'
+}' | jq .)
+
+az rest \
+    --method PATCH \
+    --uri https://graph.microsoft.com/v1.0/applications/$spaObjectId/ \
+    --headers 'Content-Type=application/json' \
+    --body "$spaBody"
+
 # ACR
 az acr create \
     --resource-group $rg \
@@ -167,183 +354,3 @@ az keyvault set-policy \
     --name $kv \
     --secret-permissions get list \
     --object-id $SECONDARY_PRINCIPAL
-
-# Add Key Vault config to appsettings in APIs
-jq '. += {
-    "VaultName": "'$kv'"
-}' ../src/$api1/appsettings.json > "tmp" && mv "tmp" ../src/$api1/appsettings.json
-
-jq '. += {
-    "VaultName": "'$kv'"
-}' ../src/$api2/appsettings.json > "tmp" && mv "tmp" ../src/$api2/appsettings.json
-
-# Configure AD API App Registration
-apiAppId=$(az ad app create \
-    --display-name $adApiApp \
-    --sign-in-audience AzureADMyOrg \
-    --query appId \
-    --output tsv \
-| tr -d '\r')
-
-apiObjectId=$(az ad app show \
-    --id $apiAppId \
-    --query id \
-    --output tsv \
-| tr -d '\r')
-
-# Configure delegated OAuth permissions
-read=$(echo '{
-    "adminConsentDescription": "Allow the API to read signed-in users data.",
-    "adminConsentDisplayName": "Read data.",
-    "id": "'$readId'",
-    "isEnabled": true,
-    "type": "User",
-    "userConsentDescription": "Allow the API to read data on your behalf.",
-    "userConsentDisplayName": "Read data as yourself.",
-    "value": "Demo.Read"
-}')
-
-readWrite=$(echo '{
-    "adminConsentDescription": "Allow the API to read and write signed-in users data.",
-    "adminConsentDisplayName": "Read and Write data.",
-    "id": "'$readWriteId'",
-    "isEnabled": true,
-    "type": "User",
-    "userConsentDescription": "Allow the API to read and write data on your behalf.",
-    "userConsentDisplayName": "Read and Write data as yourself.",
-    "value": "Demo.ReadWrite"
-}')
-
-api=$(echo '"api": {
-    "oauth2PermissionScopes": [
-        '$read',
-        '$readWrite'
-    ]
-}')
-
-# Configure API App Roles
-appRead=$(echo '{
-    "allowedMemberTypes": [
-        "Application"
-    ],
-    "description": "Allow this application to read every users data.",
-    "displayName": "Demo.Read.All",
-    "id": "'$appReadId'",
-    "isEnabled": true,
-    "origin": "Application",
-    "value": "Demo.Read.All"
-}')
-
-appReadWrite=$(echo '{
-    "allowedMemberTypes": [
-        "Application"
-    ],
-    "description": "Allow this application to read and write every users data.",
-    "displayName": "Demo.ReadWrite.All",
-    "id": "'$appReadWriteId'",
-    "isEnabled": true,
-    "origin": "Application",
-    "value": "Demo.ReadWrite.All"
-}')
-
-appRoles=$(echo '"appRoles": [
-    '$appRead',
-    '$appReadWrite'
-]')
-
-# Configure API App Identifier URI
-identifierUris=$(echo '"identifierUris": [
-    "api://'$apiAppId'"
-]')
-
-# Optional Claims
-optionalClaims=$(echo '"optionalClaims": {
-    "accessToken": [
-        {
-            "additionalProperties": [],
-            "essential": false,
-            "name": "idtyp",
-            "source": null
-        }
-    ]
-}')
-
-# Compose API App Configuration and update App Registration
-apiBody=$(echo '{
-    '$api',
-    '$appRoles',
-    '$identifierUris',
-    '$optionalClaims'
-}' | jq .)
-
-az rest \
-    --method PATCH \
-    --uri https://graph.microsoft.com/v1.0/applications/$apiObjectId/ \
-    --headers 'Content-Type=application/json' \
-    --body "$apiBody"
-
-# Add AzureAd config to appsettings in APIs
-jq '.AzureAd += {
-    "Instance": "https://login.microsoftonline.com/",
-    "Domain": "qualified.domain.name",
-    "ClientId": "'$apiAppId'",
-    "TenantId": "'$tenantId'"
-}' ../src/$api1/appsettings.json > "tmp" && mv "tmp" ../src/$api1/appsettings.json
-
-jq '.AzureAd += {
-    "Instance": "https://login.microsoftonline.com/",
-    "Domain": "qualified.domain.name",
-    "ClientId": "'$apiAppId'",
-    "TenantId": "'$tenantId'"
-}' ../src/$api2/appsettings.json > "tmp" && mv "tmp" ../src/$api2/appsettings.json
-
-# Configure AD SPA App Registration
-spaAppId=$(az ad app create \
-    --display-name $adSpaApp \
-    --sign-in-audience AzureADMyOrg \
-    --query appId \
-    --output tsv \
-| tr -d '\r')
-
-spaObjectId=$(az ad app show \
-    --id $spaAppId \
-    --query id \
-    --output tsv \
-| tr -d '\r')
-
-# Configure API Permissions
-requiredResourceAccess=$(echo '"requiredResourceAccess": [
-    {
-        "resourceAccess": [
-            {
-                "id": "'$appReadId'",
-                "type": "Scope"
-            },
-            {
-                "id": "'$appReadWriteId'",
-                "type": "Scope"
-            }
-        ],
-        "resourceAppId": "'$apiAppId'"
-    }
-]')
-
-# Configure Redirect URIs
-spa=$(echo '"spa": {
-    "redirectUris": [
-        "http://localhost:4200/",
-        "http://localhost:4200/auth"
-    ]
-}')
-
-# Compose API App Configuration and update App Registration
-spaBody=$(echo '{
-    '$requiredResourceAccess',
-    '$spa'
-}' | jq .)
-
-az rest \
-    --method PATCH \
-    --uri https://graph.microsoft.com/v1.0/applications/$spaObjectId/ \
-    --headers 'Content-Type=application/json' \
-    --body "$spaBody"

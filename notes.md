@@ -1,9 +1,5 @@
 # Notes
 
-Issues:
-
-* [Resolve failed local Docker runs](https://kevinle.medium.com/securely-store-and-access-secrets-in-azure-keyvault-from-docker-based-app-service-babe463fe57b)
-
 Demonstrate:
 
 * [Containerized App Service](https://github.com/JaimeStill/learning-azure/tree/main/exercises/app-service/02-app-service-containerized)
