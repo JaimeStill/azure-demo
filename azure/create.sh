@@ -22,8 +22,7 @@ az keyvault secret set \
 # Configure AD API App Registration
 apiAppId=$(az ad app create \
     --display-name $adApiApp \
-    --sign-in-audience AzureADMyOrg \
-    --public-client-redirect-uris http://localhost \
+    --public-client-redirect-uris https://login.microsoftonline.com/common/oauth2/nativeclient \
     --is-fallback-public-client true \
     --query appId \
     --output tsv \
@@ -132,7 +131,7 @@ jq '. += {
         "Instance": "https://login.microsoftonline.com/",
         "Domain": "qualified.domain.name",
         "ClientId": "'$apiAppId'",
-        "TenantId": "'$tenantId'"
+        "TenantId": "'$tenant'"
     },
     "VaultName": "'$kv'"
 }' ../src/$api1/appsettings.json > "tmp" && mv "tmp" ../src/$api1/appsettings.json
@@ -142,14 +141,14 @@ jq '. += {
         "Instance": "https://login.microsoftonline.com/",
         "Domain": "qualified.domain.name",
         "ClientId": "'$apiAppId'",
-        "TenantId": "'$tenantId'"
+        "TenantId": "'$tenant'"
     },
     "VaultName": "'$kv'"
 }' ../src/$api2/appsettings.json > "tmp" && mv "tmp" ../src/$api2/appsettings.json
 
 jq '.AuthSettings += {
     "ClientId": "'$apiAppId'",
-    "TenantId": "'$tenantId'",
+    "TenantId": "'$tenant'",
     "Scopes": [
         "api://'$apiAppId'/Demo.Read"
     ]

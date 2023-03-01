@@ -14,9 +14,7 @@ public class AuthCommand : CliCommand
     public AuthCommand() : base(
         "auth",
         "Demonstrate Azure AD API Authentication / Authorization",
-        new Func<string, Task>(
-            async (server) => await Call(server)
-        )
+        new Func<string, Task>(Call)
     ) { }
 
     static async Task Call(string server)
@@ -42,7 +40,7 @@ public class AuthCommand : CliCommand
         HttpClient client = new();
         client.DefaultRequestHeaders.Authorization = new("Bearer", result.AccessToken);
 
-        HttpResponseMessage response = await client.GetAsync($"{server}/api/auth");
+        HttpResponseMessage response = await client.GetAsync($"{server}auth");
         Console.WriteLine(await response.Content.ReadAsStringAsync());
     }
 
@@ -71,16 +69,23 @@ public class AuthCommand : CliCommand
         }
         catch (MsalUiRequiredException)
         {
-            return await AuthenticateInteractive(app, settings);
+            return await AuthenticateViaDevCode(app, settings);
         }
     }
 
-    static async Task<AuthenticationResult> AuthenticateInteractive(IPublicClientApplication app, AuthSettings settings)
+    static async Task<AuthenticationResult> AuthenticateViaDevCode(IPublicClientApplication app, AuthSettings settings)
     {
         try
         {
             AuthenticationResult result = await app
-                .AcquireTokenInteractive(settings.Scopes)
+                .AcquireTokenWithDeviceCode(
+                    settings.Scopes,
+                    deviceCodeResult =>
+                    {
+                        Console.WriteLine(deviceCodeResult.Message);
+                        return Task.FromResult(0);
+                    }
+                )
                 .ExecuteAsync();
 
             return result;

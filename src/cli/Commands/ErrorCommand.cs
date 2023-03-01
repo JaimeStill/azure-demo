@@ -4,9 +4,7 @@ public class ErrorCommand : CliCommand
     public ErrorCommand() : base(
         "error",
         "Demonstrate JsonExceptionMiddleware error handling",
-        new Func<string, Task>(
-            async (server) => await Call(server)
-        )
+        new Func<string, Task>(Call)
     ) { }
 
     static async Task Call(string server)
