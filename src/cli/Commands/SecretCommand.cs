@@ -4,9 +4,7 @@ public class SecretCommand : CliCommand
     public SecretCommand() : base(
         "secret",
         "Demonstrate retrieving a Azure Key Vault secret",
-        new Action<string>(
-            async (server) => await Call(server)
-        )
+        new Func<string, Task>(Call)
     ) { }
 
     static async Task Call(string server)

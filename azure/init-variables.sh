@@ -11,11 +11,8 @@ export hook1=deployprimary
 export hook2=deploysecondary
 export adApiApp=demo-ad-api
 export adSpaApp=demo-ad-spa
+export tenant=common
 export readId=$(uuidgen)
 export readWriteId=$(uuidgen)
 export appReadId=$(uuidgen)
 export appReadWriteId=$(uuidgen)
-
-export tenantId=$(az account show \
-    --query "tenantId" \
-    --output tsv)
