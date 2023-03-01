@@ -9,7 +9,12 @@ var builder = WebApplication.CreateBuilder(args);
 
 builder.Services
     .AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
-    .AddMicrosoftIdentityWebApi(builder.Configuration.GetSection("AzureAd"));
+    .AddMicrosoftIdentityWebApi(options =>
+    {
+        builder.Configuration.Bind("AzureAd", options);
+        options.Events = new JwtBearerEvents();
+    },
+    options => { builder.Configuration.Bind("AzureAd", options); });
 
 // Add services to the container.
 builder.InitializeKeyVault();

@@ -35,63 +35,38 @@ apiObjectId=$(az ad app show \
 | tr -d '\r')
 
 # Configure delegated OAuth permissions
-read=$(echo '{
-    "adminConsentDescription": "Allow the API to read signed-in users data.",
-    "adminConsentDisplayName": "Read data.",
-    "id": "'$readId'",
+access=$(echo '{
+    "adminConsentDescription": "Allow the API to access signed-in users data.",
+    "adminConsentDisplayName": "Access data.",
+    "id": "'$accessId'",
     "isEnabled": true,
     "type": "User",
-    "userConsentDescription": "Allow the API to read data on your behalf.",
-    "userConsentDisplayName": "Read data as yourself.",
-    "value": "Demo.Read"
-}')
-
-readWrite=$(echo '{
-    "adminConsentDescription": "Allow the API to read and write signed-in users data.",
-    "adminConsentDisplayName": "Read and Write data.",
-    "id": "'$readWriteId'",
-    "isEnabled": true,
-    "type": "User",
-    "userConsentDescription": "Allow the API to read and write data on your behalf.",
-    "userConsentDisplayName": "Read and Write data as yourself.",
-    "value": "Demo.ReadWrite"
+    "userConsentDescription": "Allow the API to access data on your behalf.",
+    "userConsentDisplayName": "Access data as yourself.",
+    "value": "demo_access"
 }')
 
 api=$(echo '"api": {
     "oauth2PermissionScopes": [
-        '$read',
-        '$readWrite'
+        '$access'
     ]
 }')
 
 # Configure API App Roles
-appRead=$(echo '{
+appAccess=$(echo '{
     "allowedMemberTypes": [
         "Application"
     ],
-    "description": "Allow this application to read every users data.",
-    "displayName": "Demo.Read.All",
-    "id": "'$appReadId'",
+    "description": "Allow this application to access every users data.",
+    "displayName": "demo_app_access",
+    "id": "'$appAccessId'",
     "isEnabled": true,
     "origin": "Application",
-    "value": "Demo.Read.All"
-}')
-
-appReadWrite=$(echo '{
-    "allowedMemberTypes": [
-        "Application"
-    ],
-    "description": "Allow this application to read and write every users data.",
-    "displayName": "Demo.ReadWrite.All",
-    "id": "'$appReadWriteId'",
-    "isEnabled": true,
-    "origin": "Application",
-    "value": "Demo.ReadWrite.All"
+    "value": "demo_app_access"
 }')
 
 appRoles=$(echo '"appRoles": [
-    '$appRead',
-    '$appReadWrite'
+    '$appAccess'
 ]')
 
 # Configure API App Identifier URI
@@ -129,20 +104,22 @@ az rest \
 jq '. += {
     "AzureAd": {
         "Instance": "https://login.microsoftonline.com/",
-        "Domain": "qualified.domain.name",
+        "Domain": "'$api1'.azurewebsites.net",
         "ClientId": "'$apiAppId'",
         "TenantId": "'$tenant'"
     },
+    "Scopes": "demo_access",
     "VaultName": "'$kv'"
 }' ../src/$api1/appsettings.json > "tmp" && mv "tmp" ../src/$api1/appsettings.json
 
 jq '. += {
     "AzureAd": {
         "Instance": "https://login.microsoftonline.com/",
-        "Domain": "qualified.domain.name",
+        "Domain": "'$api2'.azurewebsites.net",
         "ClientId": "'$apiAppId'",
         "TenantId": "'$tenant'"
     },
+    "Scopes": "demo_access",
     "VaultName": "'$kv'"
 }' ../src/$api2/appsettings.json > "tmp" && mv "tmp" ../src/$api2/appsettings.json
 
@@ -150,7 +127,7 @@ jq '.AuthSettings += {
     "ClientId": "'$apiAppId'",
     "TenantId": "'$tenant'",
     "Scopes": [
-        "api://'$apiAppId'/Demo.Read"
+        "api://'$apiAppId'/demo_access"
     ]
 }' ../src/$cli/appsettings.json > "tmp" && mv "tmp" ../src/$cli/appsettings.json
 
@@ -173,11 +150,7 @@ requiredResourceAccess=$(echo '"requiredResourceAccess": [
     {
         "resourceAccess": [
             {
-                "id": "'$appReadId'",
-                "type": "Scope"
-            },
-            {
-                "id": "'$appReadWriteId'",
+                "id": "'$appAccessId'",
                 "type": "Scope"
             }
         ],

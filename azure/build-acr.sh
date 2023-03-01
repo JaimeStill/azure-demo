@@ -1,5 +1,11 @@
 #!/bin/bash
 
+# example:
+# . build-acr \
+#   -i jps-core-api \
+#   -r armaregistry \
+#   -s ../src/jps-core-api
+
 while getopts i:r:s: option
 do
     case "${option}"
