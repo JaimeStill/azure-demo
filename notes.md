@@ -29,3 +29,8 @@ docker rm {container}
 # remove image
 docker rmi {image}
 ```
+
+## References
+
+* [Microsoft Identity Web APIs Wiki](https://github.com/AzureAD/microsoft-identity-web/wiki/web-apis)
+* [Microsoft.Identity.Web ClaimsPrincipalExtensions](https://learn.microsoft.com/en-us/dotnet/api/microsoft.identity.web.claimsprincipalextensions?view=msal-model-dotnet-latest)
