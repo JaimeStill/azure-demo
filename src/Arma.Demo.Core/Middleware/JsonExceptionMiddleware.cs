@@ -18,6 +18,8 @@ public class JsonExceptionMiddleware
 
     public async Task InvokeAsync(HttpContext context, IConfiguration config, IWebHostEnvironment env)
     {
+        await next(context);
+
         IExceptionHandlerFeature error = context.Features.Get<IExceptionHandlerFeature>();
 
         context.Response.StatusCode = StatusCodes.Status500InternalServerError;
@@ -26,8 +28,6 @@ public class JsonExceptionMiddleware
         JsonExceptionData response = new(context, error);
         await context.Response.WriteAsJsonAsync(response);
         await response.LogError(InitializeLogPath(config, env));
-        
-        await next(context);
     }
 
     static string InitializeLogPath(IConfiguration config, IWebHostEnvironment env)
