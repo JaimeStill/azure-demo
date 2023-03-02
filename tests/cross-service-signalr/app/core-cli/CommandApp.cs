@@ -1,7 +1,7 @@
-using CloudCli.Commands;
+using CoreCli.Commands;
 using System.CommandLine;
 
-namespace CloudCli;
+namespace CoreCli;
 public static class CommandApp
 {
     public static RootCommand Initialize() =>
@@ -10,20 +10,17 @@ public static class CommandApp
 
     static List<Command> BuildCommands() => new()
     {
-        new AuthCommand().Build(),
-        new ErrorCommand().Build(),
-        new ProcessCommand().Build(),
-        new SecretCommand().Build()
+        new TestProcessorCommand().Build()
     };
 
     public static RootCommand BuildRootCommand(this List<Command> commands)
     {
-        var root = new RootCommand("Cloud CLI");
+        var root = new RootCommand("Processor Test CLI");
 
         root.AddGlobalOption(new Option<string>(
-            new[] { "--server", "-s" },
-            getDefaultValue: () => "https://jps-core-api.azurewebsites.net/api/",
-            description: "The root of the API server"
+            new[] { "--root", "-r" },
+            getDefaultValue: () => "http://localhost:5000/",
+            description: "The root API endpoint"
         ));
 
         commands.ForEach(root.AddCommand);
