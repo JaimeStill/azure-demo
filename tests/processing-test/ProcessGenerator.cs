@@ -7,7 +7,6 @@ public static class ProcessGenerator
         new()
         {
             Name = "Demo Approval Process",
-            Intent = Intent.Approve,
             Tasks = new()
             {
                 new()
