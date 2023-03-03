@@ -1,7 +1,7 @@
 namespace Arma.Demo.Core.Processing;
 public class Package
 {
-    public static Guid Key => Guid.NewGuid();
+    public Guid Key { get; set; }
     public string Name { get; set; }
     public Intent Intent { get; set; }
 

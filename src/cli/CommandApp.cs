@@ -12,6 +12,7 @@ public static class CommandApp
     {
         new AuthCommand().Build(),
         new ErrorCommand().Build(),
+        new ProcessCommand().Build(),
         new SecretCommand().Build()
     };
 

@@ -41,6 +41,8 @@ public class ProcessingEngine
         Intent.Transfer => ProcessGenerator.TransferProcess(),
         Intent.Destroy  => ProcessGenerator.DestructionProcess(),
         _ => throw new ArgumentOutOfRangeException(
+            nameof(package.Intent),
+            package.Intent,
             "An unexpected intent was provided and no associated process could be found"
         )
     };

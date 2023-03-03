@@ -5,12 +5,13 @@ public static class PackageGenerator
 {
     public static Package ApprovalPackage() =>
         new() {
+            Key = Guid.NewGuid(),
             Name = "Demo Approval",
             Intent = Intent.Approve,
             Resources = new()
             {
-                new() { Name = "Training Plan" },
-                new() { Name = "Servers" }
+                new() { Key = Guid.NewGuid(), Name = "Training Plan" },
+                new() { Key = Guid.NewGuid(), Name = "Servers" }
             }
         };
 }
