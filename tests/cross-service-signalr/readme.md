@@ -1,6 +1,7 @@
 # Cross Service SignalR
 
 * [Demonstration](#demonstration)
+* [Notes](#notes)
 
 The purpose of this test is to demonstrate long-running, cross-service synchronization of a formalized process. This is done by leveraging a stand-alone SignalR server that acts as a message broker between any interested clients and the service that is performing some external process. To standardize the implementation of this workflow, a [`Sync`](../../src/Arma.Demo.Core/Sync/) library has been written.
 
@@ -66,3 +67,11 @@ If you look at the output from the servers after executing the CLI command, you'
 **Sync Server**
 
 ![image](https://user-images.githubusercontent.com/14102723/222831242-742e5d03-05ab-48e1-afdf-992724cb46b9.png)
+
+## Notes
+
+With this implementation, the tracking of any internal data can be standardized by encapsulating it into a publicly exposed contract (i.e. [`Resource`](../../src/Arma.Demo.Core/Processing/Resource.cs) inside of a `Package`) and transmitting it through a [`SyncMessage`](../../src/Arma.Demo.Core/Sync/SyncMessage.cs).
+
+Multilple iterations of this workflow could be chained together to facilitate various process complexities.
+
+All of the infrastructure needed to leverage this standardized flow is exposed in a [NuGet package](https://www.nuget.org/packages/Arma.Demo.Core). All you need to do is define the infrastructure relative to the data you want to track and the services you want to leverage.
