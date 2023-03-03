@@ -8,7 +8,7 @@ public abstract class SyncService<T> : ISyncService<T>
 
     protected List<Guid> Groups { get; set; }
     public virtual Action<Guid> OnRegistered { get; set; }
-    public virtual Func<SyncMessage<T>, Task> OnInitialize { get; set; }
+    public virtual Func<SyncMessage<T>, Task> OnPush { get; set; }
     public virtual Func<SyncMessage<T>, Task> OnNotify { get; set; }
     public virtual Func<SyncMessage<T>, Task> OnComplete { get; set; }
     public virtual Func<SyncMessage<T>, Task> OnReturn { get; set; }
@@ -60,10 +60,10 @@ public abstract class SyncService<T> : ISyncService<T>
         await connection.InvokeAsync("Leave", key);
     }
 
-    public async Task Initialize(SyncMessage<T> message)
+    public async Task Push(SyncMessage<T> message)
     {
-        message.Action = SyncAction.Initialize;
-        await connection.InvokeAsync("SendInitialize", message);
+        message.Action = SyncAction.Push;
+        await connection.InvokeAsync("SendPush", message);
     }
 
     public async Task Notify(SyncMessage<T> message)
@@ -95,8 +95,8 @@ public abstract class SyncService<T> : ISyncService<T>
         if (OnRegistered is not null)
             connection.On("Registered", OnRegistered);
 
-        if (OnInitialize is not null)
-            connection.On("Initialize", OnInitialize);
+        if (OnPush is not null)
+            connection.On("Push", OnPush);
 
         if (OnNotify is not null)
             connection.On("Notify", OnNotify);

@@ -5,7 +5,7 @@ public interface ISyncService<T> : IAsyncDisposable
     Task Connect();
     Task Join(Guid key);
     Task Leave(Guid key);
-    Task Initialize(SyncMessage<T> message);
+    Task Push(SyncMessage<T> message);
     Task Notify(SyncMessage<T> message);
     Task Complete(SyncMessage<T> message);
     Task Return(SyncMessage<T> message);

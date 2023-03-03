@@ -45,7 +45,7 @@ public abstract class SyncHub<T> : Hub<ISyncHub<T>>
         await groups.RemoveFromGroup(key, Context.ConnectionId, Groups);
     }
 
-    public async Task SendInitialize(SyncMessage<T> message)
+    public async Task SendPush(SyncMessage<T> message)
     {
         Console.WriteLine($"Initialization message received: {message.Message}");
         Console.WriteLine($"Message key: {message.Key}");
@@ -56,7 +56,7 @@ public abstract class SyncHub<T> : Hub<ISyncHub<T>>
                 message.Key.ToString(),
                 groups.ServiceGroup.Key.ToString()
             )
-            .Initialize(message);
+            .Push(message);
     }
 
     public async Task SendNotify(SyncMessage<T> message)

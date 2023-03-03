@@ -7,7 +7,7 @@ public class ProcessorClient : SyncService<Package>
 {
     public ProcessorClient(string endpoint) : base(endpoint)
     {
-        OnInitialize = OnNotify = Output;
+        OnPush = OnNotify = Output;
     }
 
     static Task Output(SyncMessage<Package> message)

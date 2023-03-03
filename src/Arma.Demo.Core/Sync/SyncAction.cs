@@ -1,7 +1,7 @@
 namespace Arma.Demo.Core.Sync;
 public enum SyncAction
 {
-    Initialize,
+    Push,
     Notify,
     Complete,
     Return,

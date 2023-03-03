@@ -19,11 +19,11 @@ public class ProcessorService : SyncService<Package>
             Id = Guid.NewGuid(),
             Key = package.Key,
             Data = package,
-            Action = SyncAction.Initialize,
+            Action = SyncAction.Push,
             Message = $"Initializing Package {package.Name} for processing"
         };
 
-        await Initialize(message);
+        await Push(message);
 
         await Leave(package.Key);
 

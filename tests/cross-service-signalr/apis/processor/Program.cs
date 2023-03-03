@@ -1,7 +1,6 @@
 using Arma.Demo.Core.Middleware;
 using Arma.Demo.Core.Processing;
 using Arma.Demo.Core.Sync;
-using Processor.Middleware;
 using Processor.Services;
 
 var builder = WebApplication.CreateBuilder(args);
@@ -19,7 +18,8 @@ builder.Services.AddSyncService<ProcessorService, Package>();
 
 var app = builder.Build();
 
+await ProcessorService.Initialize(app.Services);
+
 app.UseJsonExceptionHandler();
 app.UseCors();
-app.UseProcessor();
 app.Run();

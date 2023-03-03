@@ -5,28 +5,38 @@ using Microsoft.AspNetCore.SignalR.Client;
 namespace Processor.Services;
 public class ProcessorService : SyncService<Package>
 {
-    Guid Key { get; set; }
+    Guid? Key { get; set; }
 
     public ProcessorService(IConfiguration config) : base(
         config.GetValue<string>("SyncServer:ProcessorUrl") ?? "http://localhost:5100/processor"
     )
     {
-        Key = Guid.NewGuid();
-
         OnRegistered = (Guid key) =>
         {
             Console.WriteLine($"Service successfully registered at {key}");
             Key = key;
         };
 
-        OnInitialize = ProcessPackage;
+        OnPush = ProcessPackage;
+    }
+
+    public static async Task Initialize(IServiceProvider services)
+    {
+        ProcessorService? processor = services.GetService<ProcessorService>();
+
+        if (processor is not null)
+            await processor.Register();
     }
 
     public async Task Register()
     {
-        await EnsureConnection();
-        Console.WriteLine($"Registering service with key {Key}");
-        await connection.InvokeAsync("RegisterService", Key);
+        if (!Key.HasValue)
+        {
+            Key = Guid.NewGuid();
+            await EnsureConnection();
+            Console.WriteLine($"Registering service with key {Key}");
+            await connection.InvokeAsync("RegisterService", Key);
+        }
     }
 
     public async Task ProcessPackage(SyncMessage<Package> message)
