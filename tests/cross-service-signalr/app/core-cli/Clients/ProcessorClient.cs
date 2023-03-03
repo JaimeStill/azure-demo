@@ -1,62 +1,18 @@
+using Arma.Demo.Core.Processing;
+using Arma.Demo.Core.Sync;
 using Microsoft.AspNetCore.SignalR.Client;
 
 namespace CoreCli.Clients;
-public class ProcessorClient : IAsyncDisposable
+public class ProcessorClient : SyncService<Package>
 {
-    public Guid Key { get; private set; }
-    HubConnection? connection;
-    readonly Action<string> output;
-    readonly string hub;
-
-    public ProcessorClient(Guid key, string hub, Action<string> output)
+    public ProcessorClient(string endpoint) : base(endpoint)
     {
-        Key = key;
-
-        connection = new HubConnectionBuilder()
-            .WithUrl(hub)
-            .WithAutomaticReconnect()
-            .Build();
-
-        this.hub = hub;
-        this.output = output;
+        OnPush = OnNotify = Output;
     }
 
-    public async Task Initialize()
+    static Task Output(SyncMessage<Package> message)
     {
-        if (connection is not null)
-        {
-            connection.On("broadcast", output);
-            connection.On("complete", output);
-
-            Console.WriteLine($"Connecting to hub {hub} at group {Key}");
-            await connection.StartAsync();
-            Console.WriteLine($"Connection status: {connection.State}");
-
-            await connection
-                .InvokeAsync("TriggerJoin", Key);
-        }
-    }
-
-    public async ValueTask DisposeAsync()
-    {
-        await DisposeConnection()
-            .ConfigureAwait(false);
-
-        GC.SuppressFinalize(this);
-    }
-
-    async ValueTask DisposeConnection()
-    {
-        if (connection is not null)
-        {
-            await connection
-                .InvokeAsync("TriggerLeave", Key);
-
-            await connection
-                .DisposeAsync()
-                .ConfigureAwait(false);
-
-            connection = null;
-        }
+        Console.WriteLine(message.Message);
+        return Task.CompletedTask;
     }
 }

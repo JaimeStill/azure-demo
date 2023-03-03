@@ -1,21 +1,32 @@
 using Arma.Demo.Core.Processing;
+using Arma.Demo.Core.Sync;
 
 namespace Core.Services;
-public class ProcessorService
+public class ProcessorService : SyncService<Package>
 {
-    readonly string processorEndpoint;
-    public ProcessorService(IConfiguration config)
-    {
-        processorEndpoint = config.GetValue<string>("ProcessorEndpoint")
-            ?? "http://localhost:5000/api/process/";
-    }
+    public ProcessorService(IConfiguration config) : base(
+        config.GetValue<string>("SyncServer:ProcessorUrl") ?? "http://localhost:5100/processor"
+    ) { }
 
     public async Task<bool> SendPackage(Package package)
     {
-        Console.WriteLine($"Sending package {package.Name} to processing service at {processorEndpoint}");
-        HttpClient client = new();
-        HttpResponseMessage response = await client.PostAsJsonAsync(processorEndpoint, package);
-        Console.WriteLine($"Package process status: {response.StatusCode}");
-        return response.IsSuccessStatusCode;
+        await EnsureConnection();
+
+        await Join(package.Key);
+        
+        SyncMessage<Package> message = new()
+        {
+            Id = Guid.NewGuid(),
+            Key = package.Key,
+            Data = package,
+            Action = SyncAction.Push,
+            Message = $"Initializing Package {package.Name} for processing"
+        };
+
+        await Push(message);
+
+        await Leave(package.Key);
+
+        return true;
     }
 }

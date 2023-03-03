@@ -10,7 +10,6 @@ public static class CommandApp
 
     static List<Command> BuildCommands() => new()
     {
-        new PingCommand().Build(),
         new ProcessCommand().Build()
     };
 
