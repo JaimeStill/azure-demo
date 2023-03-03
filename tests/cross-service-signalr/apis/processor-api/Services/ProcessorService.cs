@@ -11,42 +11,79 @@ public class ProcessorService
         this.socket = socket;
     }
 
-    dynamic Group(Guid key) =>
-        socket.Clients
-            .Group(key.ToString());
-
     async Task Broadcast(Guid key, string message) =>
-        await Group(key)
+        await socket.Clients
+            .Group(key.ToString())
             .SendAsync("broadcast", message);
 
     async Task Complete(Guid key, string message) =>
-        await Group(key)
+        await socket.Clients
+            .Group(key.ToString())
             .SendAsync("complete", message);
 
-    public async Task ProcessPackage(Package package)
+    public async Task<bool> ProcessPackage(Package package)
     {
-        Process process = GenerateProcess(package);
+        try
+        {
+            Console.WriteLine($"Processing package {package.Name}");
 
-        await Broadcast(
-            package.Key,
-            $"Submitting package {package.Name} for {package.Intent.ToActionString()}"
-        );
+            Process process = GenerateProcess(package);
 
-        await Task.Delay(1200);
+            Console.WriteLine($"Broadcasting to group {package.Key}");
 
-        await Complete(
-            package.Key,
-            $"Package {package.Name} was successfully approved"
-        );
+            await Broadcast(
+                package.Key,
+                $"Submitting package {package.Name} for {package.Intent.ToActionString()}"
+            );
+
+            await Task.Delay(1200);
+
+            await Broadcast(
+                package.Key,
+                $"Package {package.Name} assigned process {process.Name}"
+            );
+
+            foreach (ProcessTask task in process.Tasks)
+            {
+                await Broadcast(
+                    package.Key,
+                    $"Current step: {task.Name}"
+                );
+
+                await Task.Delay(task.Duration);
+
+                await Broadcast(
+                    package.Key,
+                    $"Package {package.Name} was successfully appoved by {task.Section}"
+                );
+            }
+
+            await Task.Delay(300);
+
+            await Complete(
+                package.Key,
+                $"Package {package.Name} was successfully approved"
+            );
+
+            Console.WriteLine($"Processing package {package.Name} with process {process.Name} was successful");
+
+            return true;
+        }
+        catch
+        {
+            return false;
+        }
     }
 
     static Process GenerateProcess(Package package) => package.Intent switch
     {
-        Intent.Approve  => Approval(),
-        Intent.Acquire  => Acquisition(),
+        Intent.Approve => Approval(),
+        Intent.Acquire => Acquisition(),
         Intent.Transfer => Transfer(),
-        Intent.Destroy  => Destruction(),
+        Intent.Destroy => Destruction(),
         _ => throw new ArgumentOutOfRangeException(
+            nameof(package.Intent),
+            package.Intent,
             "An unexpected intent was provided and no associated process could be found"
         )
     };

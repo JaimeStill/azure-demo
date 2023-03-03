@@ -1,16 +1,16 @@
 using Microsoft.AspNetCore.SignalR.Client;
 
-namespace CoreCli;
+namespace CoreCli.Clients;
 public class ProcessorClient : IAsyncDisposable
 {
     public Guid Key { get; private set; }
     HubConnection? connection;
-    Action<string> output;
-    string hub;
+    readonly Action<string> output;
+    readonly string hub;
 
-    public ProcessorClient(string hub, Action<string> output)
+    public ProcessorClient(Guid key, string hub, Action<string> output)
     {
-        Key = Guid.NewGuid();
+        Key = key;
 
         connection = new HubConnectionBuilder()
             .WithUrl(hub)
@@ -25,10 +25,10 @@ public class ProcessorClient : IAsyncDisposable
     {
         if (connection is not null)
         {
-            connection.On<string>("message", output);
-            connection.On<string>("complete", output);
+            connection.On("broadcast", output);
+            connection.On("complete", output);
 
-            Console.WriteLine($"Connecting to hub: {hub}");
+            Console.WriteLine($"Connecting to hub {hub} at group {Key}");
             await connection.StartAsync();
             Console.WriteLine($"Connection status: {connection.State}");
 

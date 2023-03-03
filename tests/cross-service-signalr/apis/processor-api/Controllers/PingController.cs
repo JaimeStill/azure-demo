@@ -1,6 +1,7 @@
 using Microsoft.AspNetCore.Mvc;
 using Processor.Services;
 
+namespace Processor.Controllers;
 [Route("api/[controller]")]
 public class PingController : Controller
 {

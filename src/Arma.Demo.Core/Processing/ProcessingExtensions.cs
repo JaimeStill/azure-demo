@@ -7,6 +7,10 @@ public static class ProcessingExtensions
         Intent.Approve => "Approval",
         Intent.Destroy => "Destruction",
         Intent.Transfer => "Transfer",
-        _ => throw new ArgumentOutOfRangeException("An unexpected intent was provided")
+        _ => throw new ArgumentOutOfRangeException(
+            nameof(intent),
+            intent,
+            "An unexpected intent was provided"
+        )
     };
 }
