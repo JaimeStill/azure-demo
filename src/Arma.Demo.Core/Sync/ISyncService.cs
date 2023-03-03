@@ -1,12 +1,13 @@
 namespace Arma.Demo.Core.Sync;
 public interface ISyncService<T> : IAsyncDisposable
 {
-    public Task Connect(Guid key);
-    public Task Join(Guid key);
-    public Task Leave(Guid key);
-    public Task Initialize(SyncMessage<T> message);
-    public Task Notify(SyncMessage<T> message);
-    public Task Complete(SyncMessage<T> message);
-    public Task Return(SyncMessage<T> message);
-    public Task Reject(SyncMessage<T> message);
+    Task EnsureConnection();
+    Task Connect();
+    Task Join(Guid key);
+    Task Leave(Guid key);
+    Task Initialize(SyncMessage<T> message);
+    Task Notify(SyncMessage<T> message);
+    Task Complete(SyncMessage<T> message);
+    Task Return(SyncMessage<T> message);
+    Task Reject(SyncMessage<T> message);
 }

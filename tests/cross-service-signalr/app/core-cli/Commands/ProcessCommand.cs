@@ -2,6 +2,7 @@ using Arma.Demo.Core.Processing;
 using System.CommandLine;
 using CoreCli.Clients;
 using System.Net.Http.Json;
+using Arma.Demo.Core.Sync;
 
 namespace CoreCli.Commands;
 public class ProcessCommand : CliCommand
@@ -18,9 +19,9 @@ public class ProcessCommand : CliCommand
                 description: "The Core API process endpoint"
             ),
             new Option<string>(
-                new string[] { "--hub", "-h" },
-                getDefaultValue: () => "http://localhost:5000/processor",
-                description: "The processor API hub endpoint"
+                new string[] { "--sync", "-s" },
+                getDefaultValue: () => "http://localhost:5100/processor",
+                description: "The SyncServer processor endpoint"
             ),
             new Option<Intent>(
                 new string[] { "--intent", "-i" },
@@ -30,22 +31,32 @@ public class ProcessCommand : CliCommand
         }
     ) { }
 
-    static async Task Call(string api, string hub, Intent intent)
+    static async Task Call(string api, string sync, Intent intent)
     {
+        bool exit = false;
+        await using ProcessorClient processor = new(sync);
+
+        processor.OnComplete = async (SyncMessage<Package> message) =>
+        {
+            Console.WriteLine(message.Message);
+            await processor.Leave(message.Key);
+            exit = true;
+        };
+
         Console.WriteLine($"Generating {intent.ToActionString()} Package");
         Package package = GeneratePackage(intent);
 
-        await using ProcessorClient processor = new(package.Key, hub, Output);
-        await processor.Initialize();
+        await processor.Connect();
+        await processor.Join(package.Key);
 
         string endpoint = $"{api}";
         Console.WriteLine($"Sending package {package.Name} to {endpoint}");
         HttpClient client = new();
         HttpResponseMessage response = await client.PostAsJsonAsync(endpoint, package);
         Console.WriteLine($"Package processing execution {(response.IsSuccessStatusCode ? "succeeded" : "failed")}");
-    }
 
-    static void Output(string message) => Console.WriteLine(message);
+        while (!exit) { }
+    }
 
     static Package GeneratePackage(Intent intent) => intent switch
     {

@@ -1,4 +1,4 @@
-namespace Processor.Hubs;
+namespace SyncServer.Hubs;
 public static class HubExtensions
 {
     public static void MapHubs(this WebApplication app)

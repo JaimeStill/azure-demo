@@ -7,56 +7,94 @@ public abstract class SyncService<T> : ISyncService<T>
     protected readonly string endpoint;
 
     protected List<Guid> Groups { get; set; }
-    protected abstract Func<SyncMessage<T>, Task> OnInitialize { get; set; }
-    protected abstract Func<SyncMessage<T>, Task> OnNotify { get; set; }
-    protected abstract Func<SyncMessage<T>, Task> OnComplete { get; set; }
-    protected abstract Func<SyncMessage<T>, Task> OnReturn { get; set; }
-    protected abstract Func<SyncMessage<T>, Task> OnReject { get; set; }
+    public virtual Action<Guid> OnRegistered { get; set; }
+    public virtual Func<SyncMessage<T>, Task> OnInitialize { get; set; }
+    public virtual Func<SyncMessage<T>, Task> OnNotify { get; set; }
+    public virtual Func<SyncMessage<T>, Task> OnComplete { get; set; }
+    public virtual Func<SyncMessage<T>, Task> OnReturn { get; set; }
+    public virtual Func<SyncMessage<T>, Task> OnReject { get; set; }
 
     public SyncService(string endpoint)
     {
-        connection = new HubConnectionBuilder()
-            .WithUrl(endpoint)
-            .WithAutomaticReconnect()
-            .Build();
+        Console.WriteLine($"Building Sync connection at {endpoint}");
+        connection = BuildHubConnection(endpoint);
 
         this.endpoint = endpoint;
         Groups = new();
     }
 
-    public async Task Connect(Guid key)
+    protected virtual HubConnection BuildHubConnection(string endpoint) =>
+        new HubConnectionBuilder()
+            .WithUrl(endpoint)
+            .WithAutomaticReconnect()
+            .Build();
+
+    public async Task EnsureConnection()
+    {
+        if (connection.State != HubConnectionState.Connected)
+            await Connect();
+    }
+
+    public async Task Connect()
     {
         if (connection is not null)
         {
+            Console.WriteLine("Registering Sync events");
             RegisterEvents();
+            Console.WriteLine($"Connecting to {endpoint}");
             await connection.StartAsync();
-            await Join(key);
         }
     }
 
-    public async Task Join(Guid key) =>
+    public async Task Join(Guid key)
+    {
+        Groups.Add(key);
+        Console.WriteLine($"Joining group {key}");
         await connection.InvokeAsync("Join", key);
+    }
 
-    public async Task Leave(Guid key) =>
+    public async Task Leave(Guid key)
+    {
+        Groups.Remove(key);
+        Console.WriteLine($"Leaving group {key}");
         await connection.InvokeAsync("Leave", key);
+    }
 
-    public async Task Initialize(SyncMessage<T> message) =>
+    public async Task Initialize(SyncMessage<T> message)
+    {
+        message.Action = SyncAction.Initialize;
         await connection.InvokeAsync("SendInitialize", message);
+    }
 
-    public async Task Notify(SyncMessage<T> message) =>
+    public async Task Notify(SyncMessage<T> message)
+    {
+        message.Action = SyncAction.Notify;
         await connection.InvokeAsync("SendNotify", message);
+    }
 
-    public async Task Complete(SyncMessage<T> message) =>
+    public async Task Complete(SyncMessage<T> message)
+    {
+        message.Action = SyncAction.Complete;
         await connection.InvokeAsync("SendComplete", message);
+    }
 
-    public async Task Return(SyncMessage<T> message) =>
+    public async Task Return(SyncMessage<T> message)
+    {
+        message.Action = SyncAction.Return;
         await connection.InvokeAsync("SendReturn", message);
+    }
 
-    public async Task Reject(SyncMessage<T> message) =>
+    public async Task Reject(SyncMessage<T> message)
+    {
+        message.Action = SyncAction.Reject;
         await connection.InvokeAsync("SendReject", message);
+    }
 
     void RegisterEvents()
     {
+        if (OnRegistered is not null)
+            connection.On("Registered", OnRegistered);
+
         if (OnInitialize is not null)
             connection.On("Initialize", OnInitialize);
 

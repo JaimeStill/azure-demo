@@ -1,78 +1,69 @@
 using Arma.Demo.Core.Processing;
-using Microsoft.AspNetCore.SignalR;
-using Processor.Hubs;
+using Arma.Demo.Core.Sync;
+using Microsoft.AspNetCore.SignalR.Client;
 
 namespace Processor.Services;
-public class ProcessorService
+public class ProcessorService : SyncService<Package>
 {
-    readonly IHubContext<ProcessorHub> socket;
-    public ProcessorService(IHubContext<ProcessorHub> socket)
+    Guid Key { get; set; }
+
+    public ProcessorService(IConfiguration config) : base(
+        config.GetValue<string>("SyncServer:ProcessorUrl") ?? "http://localhost:5100/processor"
+    )
     {
-        this.socket = socket;
+        Key = Guid.NewGuid();
+
+        OnRegistered = (Guid key) =>
+        {
+            Console.WriteLine($"Service successfully registered at {key}");
+            Key = key;
+        };
+
+        OnInitialize = ProcessPackage;
     }
 
-    async Task Broadcast(Guid key, string message) =>
-        await socket.Clients
-            .Group(key.ToString())
-            .SendAsync("broadcast", message);
-
-    async Task Complete(Guid key, string message) =>
-        await socket.Clients
-            .Group(key.ToString())
-            .SendAsync("complete", message);
-
-    public async Task<bool> ProcessPackage(Package package)
+    public async Task Register()
     {
-        try
+        await EnsureConnection();
+        Console.WriteLine($"Registering service with key {Key}");
+        await connection.InvokeAsync("RegisterService", Key);
+    }
+
+    public async Task ProcessPackage(SyncMessage<Package> message)
+    {
+        Console.WriteLine($"Processing package {message.Data.Name}");
+
+        Process process = GenerateProcess(message.Data);
+
+        Console.WriteLine($"Notifying group {message.Data.Key}");
+
+        message.Message = $"Submitting package {message.Data.Name} for {message.Data.Intent.ToActionString()}";
+
+        await Notify(message);
+
+        await Task.Delay(1200);
+
+        message.Message = $"Package {message.Data.Name} assigned process {process.Name}";
+
+        await Notify(message);
+
+        foreach (ProcessTask task in process.Tasks)
         {
-            Console.WriteLine($"Processing package {package.Name}");
+            message.Message = $"Current step: {task.Name}";
+            await Notify(message);
 
-            Process process = GenerateProcess(package);
+            await Task.Delay(task.Duration);
 
-            Console.WriteLine($"Broadcasting to group {package.Key}");
-
-            await Broadcast(
-                package.Key,
-                $"Submitting package {package.Name} for {package.Intent.ToActionString()}"
-            );
-
-            await Task.Delay(1200);
-
-            await Broadcast(
-                package.Key,
-                $"Package {package.Name} assigned process {process.Name}"
-            );
-
-            foreach (ProcessTask task in process.Tasks)
-            {
-                await Broadcast(
-                    package.Key,
-                    $"Current step: {task.Name}"
-                );
-
-                await Task.Delay(task.Duration);
-
-                await Broadcast(
-                    package.Key,
-                    $"Package {package.Name} was successfully appoved by {task.Section}"
-                );
-            }
-
-            await Task.Delay(300);
-
-            await Complete(
-                package.Key,
-                $"Package {package.Name} was successfully approved"
-            );
-
-            Console.WriteLine($"Processing package {package.Name} with process {process.Name} was successful");
-
-            return true;
+            message.Message = $"Package {message.Data.Name} was successfully appoved by {task.Section}";
+            await Notify(message);
         }
-        catch
-        {
-            return false;
-        }
+
+        await Task.Delay(300);
+
+        message.Message = $"Package {message.Data.Name} was successfully approved";
+        await Complete(message);
+
+        Console.WriteLine($"Processing package {message.Data.Name} with process {process.Name} was successful");
     }
 
     static Process GenerateProcess(Package package) => package.Intent switch

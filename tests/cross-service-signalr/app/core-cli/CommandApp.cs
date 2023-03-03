@@ -11,7 +11,8 @@ public static class CommandApp
     static List<Command> BuildCommands() => new()
     {
         new PingCommand().Build(),
-        new ProcessCommand().Build()
+        new ProcessCommand().Build(),
+        new SyncCommand().Build()
     };
 
     public static RootCommand BuildRootCommand(this List<Command> commands)

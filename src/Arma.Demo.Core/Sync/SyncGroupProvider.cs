@@ -3,11 +3,29 @@ using Microsoft.AspNetCore.SignalR;
 namespace Arma.Demo.Core.Sync;
 public class SyncGroupProvider
 {
+    public SyncGroup ServiceGroup { get; private set; }
     public List<SyncGroup> SyncGroups { get; private set; }
 
     public SyncGroupProvider()
     {
-        SyncGroups = new();        
+        SyncGroups = new();
+    }
+
+    public async Task<Guid> InitializeService(Guid key, string connectionId, IGroupManager groups)
+    {
+        if (ServiceGroup is null)
+        {
+            ServiceGroup = new(key, new() { connectionId });
+        }
+        else
+        {
+            if (!ServiceGroup.Connections.Contains(connectionId))
+                ServiceGroup.Connections.Add(connectionId);
+        }
+
+        await groups.AddToGroupAsync(connectionId, ServiceGroup.Key.ToString());
+
+        return ServiceGroup.Key;
     }
 
     public async Task AddToGroup(Guid key, string connectionId, IGroupManager groups)

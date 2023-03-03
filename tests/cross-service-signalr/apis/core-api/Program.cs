@@ -1,4 +1,6 @@
 using Arma.Demo.Core.Middleware;
+using Arma.Demo.Core.Processing;
+using Arma.Demo.Core.Sync;
 using Core.Services;
 
 var builder = WebApplication.CreateBuilder(args);
@@ -16,7 +18,7 @@ builder.Services.AddControllers();
 // Learn more about configuring Swagger/OpenAPI at https://aka.ms/aspnetcore/swashbuckle
 builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen();
-builder.Services.AddScoped<ProcessorService>();
+builder.Services.AddSyncService<ProcessorService, Package>();
 
 var app = builder.Build();
 
