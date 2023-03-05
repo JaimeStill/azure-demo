@@ -104,24 +104,13 @@ az rest \
 jq '. += {
     "AzureAd": {
         "Instance": "https://login.microsoftonline.com/",
-        "Domain": "'$api1'.azurewebsites.net",
+        "Domain": "'$coreApi'.azurewebsites.net",
         "ClientId": "'$apiAppId'",
         "TenantId": "'$tenant'"
     },
     "Scopes": "demo_access",
     "VaultName": "'$kv'"
-}' ../src/$api1/appsettings.json > "tmp" && mv "tmp" ../src/$api1/appsettings.json
-
-jq '. += {
-    "AzureAd": {
-        "Instance": "https://login.microsoftonline.com/",
-        "Domain": "'$api2'.azurewebsites.net",
-        "ClientId": "'$apiAppId'",
-        "TenantId": "'$tenant'"
-    },
-    "Scopes": "demo_access",
-    "VaultName": "'$kv'"
-}' ../src/$api2/appsettings.json > "tmp" && mv "tmp" ../src/$api2/appsettings.json
+}' ../src/$coreApi/appsettings.json > "tmp" && mv "tmp" ../src/$coreApi/appsettings.json
 
 jq '.AuthSettings += {
     "ClientId": "'$apiAppId'",
@@ -205,13 +194,18 @@ ACR_PW=$(az acr credential show \
 # Build Docker images with ACR
 az acr build \
     --registry $acr \
-    --image $api1 \
-    ../src/$api1
+    --image $sync \
+    ../src/$sync
 
 az acr build \
     --registry $acr \
-    --image $api2 \
-    ../src/$api2
+    --image $processor \
+    ../src/$processor
+
+az acr build \
+    --registry $acr \
+    --image $coreApi \
+    ../src/$coreApi
 
 # App Plan
 az appservice plan create \
@@ -222,97 +216,108 @@ az appservice plan create \
 
 ## App Services
 az webapp create \
-    --name $api1 \
+    --name $sync \
     --plan $appPlan \
     --resource-group $rg \
     --docker-registry-server-user $ACR_ADMIN \
     --docker-registry-server-password $ACR_PW \
-    --deployment-container-image-name $acr.azurecr.io/$api1:latest
+    --deployment-container-image-name $acr.azurecr.io/$sync:latest
 
 az webapp create \
-    --name $api2 \
+    --name $processor \
     --plan $appPlan \
     --resource-group $rg \
     --docker-registry-server-user $ACR_ADMIN \
     --docker-registry-server-password $ACR_PW \
-    --deployment-container-image-name $acr.azurecr.io/$api2:latest
+    --deployment-container-image-name $acr.azurecr.io/$processor:latest
+
+az webapp create \
+    --name $coreApi \
+    --plan $appPlan \
+    --resource-group $rg \
+    --docker-registry-server-user $ACR_ADMIN \
+    --docker-registry-server-password $ACR_PW \
+    --deployment-container-image-name $acr.azurecr.io/$coreApi:latest
 
 # Configure Continuous Deployment
 az webapp deployment container config \
     --resource-group $rg \
-    --name $api1 \
+    --name $sync \
     --enable-cd true
 
 az webapp deployment container config \
     --resource-group $rg \
-    --name $api2 \
+    --name $processor \
+    --enable-cd true
+
+az webapp deployment container config \
+    --resource-group $rg \
+    --name $coreApi \
     --enable-cd true
 
 # Configure ACR CD Webhooks
-PRIMARY_WEBHOOK=$(az webapp deployment container show-cd-url \
+SYNC_WEBHOOK=$(az webapp deployment container show-cd-url \
     --resource-group $rg \
-    --name $api1 \
+    --name $sync \
     --query "CI_CD_URL" \
     --output tsv \
- | tr -d '\r')
+| tr -d '\r')
 
-SECONDARY_WEBHOOK=$(az webapp deployment container show-cd-url \
+PROCESSOR_WEBHOOK=$(az webapp deployment container show-cd-url \
     --resource-group $rg \
-    --name $api2 \
+    --name $processor \
     --query "CI_CD_URL" \
     --output tsv \
- | tr -d '\r')
+| tr -d '\r')
+
+CORE_WEBHOOK=$(az webapp deployment container show-cd-url \
+    --resource-group $rg \
+    --name $coreApi \
+    --query "CI_CD_URL" \
+    --output tsv \
+| tr -d '\r')
 
 az acr webhook create \
     --resource-group $rg \
     --registry $acr \
-    --name $hook1 \
-    --uri $PRIMARY_WEBHOOK \
+    --name $syncHook \
+    --uri $SYNC_WEBHOOK \
     --actions push
 
 az acr webhook create \
     --resource-group $rg \
     --registry $acr \
-    --name $hook2 \
-    --uri $SECONDARY_WEBHOOK \
+    --name $processorHook \
+    --uri $PROCESSOR_WEBHOOK \
+    --actions push
+
+az acr webhook create \
+    --resource-group $rg \
+    --registry $acr \
+    --name $coreHook \
+    --uri $CORE_WEBHOOK \
     --actions push
 
 # Add Key Vault to App Service settings
 
 az webapp config appsettings set \
     --resource-group $rg \
-    --name $api1 \
-    --settings "VaultName=$kv"
-
-az webapp config appsettings set \
-    --resource-group $rg \
-    --name $api2 \
+    --name $coreApi \
     --settings "VaultName=$kv"
 
 # Enable Web App Managed Identity
 az webapp identity assign \
     --resource-group $rg \
-    --name $api1
-
-az webapp identity assign \
-    --resource-group $rg \
-    --name $api2
+    --name $coreApi
 
 # Grant Key Vault Access
 # tr -d '\r' required for WSL use
 # results were coming back with a ghost \r
 # the resulting set-policy calls would error
 # with an invalid ObjectId message
-PRIMARY_PRINCIPAL=$(az webapp identity show \
+CORE_PRINCIPAL=$(az webapp identity show \
     --resource-group $rg \
-    --name $api1 \
-    --query principalId \
-    --output tsv \
-| tr -d '\r')
-
-SECONDARY_PRINCIPAL=$(az webapp identity show \
-    --resource-group $rg \
-    --name $api2 \
+    --name $coreApi \
     --query principalId \
     --output tsv \
 | tr -d '\r')
@@ -320,9 +325,4 @@ SECONDARY_PRINCIPAL=$(az webapp identity show \
 az keyvault set-policy \
     --name $kv \
     --secret-permissions get list \
-    --object-id $PRIMARY_PRINCIPAL
-
-az keyvault set-policy \
-    --name $kv \
-    --secret-permissions get list \
-    --object-id $SECONDARY_PRINCIPAL
+    --object-id $CORE_PRINCIPAL

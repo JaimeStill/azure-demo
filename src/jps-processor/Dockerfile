@@ -10,4 +10,4 @@ EXPOSE 80
 EXPOSE 443
 WORKDIR /app
 COPY --from=base /app/out .
-ENTRYPOINT ["dotnet", "Service.dll"]
+ENTRYPOINT ["dotnet", "Processor.dll"]
