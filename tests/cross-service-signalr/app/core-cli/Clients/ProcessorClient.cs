@@ -1,6 +1,5 @@
 using Arma.Demo.Core.Processing;
 using Arma.Demo.Core.Sync;
-using Microsoft.AspNetCore.SignalR.Client;
 
 namespace CoreCli.Clients;
 public class ProcessorClient : SyncService<Package>
