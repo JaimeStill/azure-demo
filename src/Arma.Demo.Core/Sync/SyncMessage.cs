@@ -7,5 +7,5 @@ public class SyncMessage<T>
     public Guid Key { get; set; }    
     public string Message { get; set; }
     public T Data { get; set; }
-    public SyncAction Action { get; set; }
+    public SyncActionType Action { get; set; }
 }

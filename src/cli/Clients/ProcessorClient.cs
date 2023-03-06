@@ -6,7 +6,8 @@ public class ProcessorClient : SyncService<Package>
 {
     public ProcessorClient(string endpoint) : base(endpoint)
     {
-        OnPush = OnNotify = Output;
+        OnPush.Set(Output);
+        OnNotify.Set(Output);
     }
 
     static Task Output(SyncMessage<Package> message)

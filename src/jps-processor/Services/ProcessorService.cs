@@ -11,13 +11,13 @@ public class ProcessorService : SyncService<Package>
         config.GetValue<string>("SyncServer:ProcessorUrl") ?? "https://jps-sync.azurewebsites.net/processor"
     )
     {
-        OnRegistered = (Guid key) =>
+        OnRegistered.Set((Guid key) =>
         {
             Console.WriteLine($"Service successfully registered at {key}");
             Key = key;
-        };
+        });
 
-        OnPush = ProcessPackage;
+        OnPush.Set(ProcessPackage);
     }
 
     public static async Task Initialize(IServiceProvider services)
@@ -33,7 +33,7 @@ public class ProcessorService : SyncService<Package>
         if (!Key.HasValue)
         {
             Key = Guid.NewGuid();
-            await EnsureConnection();
+            await Connect();
             Console.WriteLine($"Registering service with key {Key}");
             await connection.InvokeAsync("RegisterService", Key);
         }
@@ -49,31 +49,34 @@ public class ProcessorService : SyncService<Package>
 
         message.Message = $"Submitting package {message.Data.Name} for {message.Data.Intent.ToActionString()}";
 
+        Console.WriteLine(message.Message);
         await Notify(message);
 
         await Task.Delay(1200);
 
         message.Message = $"Package {message.Data.Name} assigned process {process.Name}";
 
+        Console.WriteLine(message.Message);
         await Notify(message);
 
         foreach (ProcessTask task in process.Tasks)
         {
             message.Message = $"Current step: {task.Name}";
+            Console.WriteLine(message.Message);
             await Notify(message);
 
             await Task.Delay(task.Duration);
 
             message.Message = $"Package {message.Data.Name} was successfully appoved by {task.Section}";
+            Console.WriteLine(message.Message);
             await Notify(message);
         }
 
         await Task.Delay(300);
 
         message.Message = $"Package {message.Data.Name} was successfully approved";
+        Console.WriteLine(message.Message);
         await Complete(message);
-
-        Console.WriteLine($"Processing package {message.Data.Name} with process {process.Name} was successful");
     }
 
     static Process GenerateProcess(Package package) => package.Intent switch
