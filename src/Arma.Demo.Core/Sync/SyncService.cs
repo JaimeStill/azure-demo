@@ -5,44 +5,58 @@ public abstract class SyncService<T> : ISyncService<T>
 {
     protected readonly HubConnection connection;
     protected readonly string endpoint;
+    protected CancellationToken token;
 
     protected List<Guid> Groups { get; set; }
-    public virtual Action<Guid> OnRegistered { get; set; }
-    public virtual Func<SyncMessage<T>, Task> OnPush { get; set; }
-    public virtual Func<SyncMessage<T>, Task> OnNotify { get; set; }
-    public virtual Func<SyncMessage<T>, Task> OnComplete { get; set; }
-    public virtual Func<SyncMessage<T>, Task> OnReturn { get; set; }
-    public virtual Func<SyncMessage<T>, Task> OnReject { get; set; }
+
+    public SyncEvent<Guid> OnRegistered { get; private set; }
+    public SyncEvent<SyncMessage<T>> OnPush { get; private set; }
+    public SyncEvent<SyncMessage<T>> OnNotify { get; private set; }
+    public SyncEvent<SyncMessage<T>> OnComplete { get; private set; }
+    public SyncEvent<SyncMessage<T>> OnReturn { get; private set; }
+    public SyncEvent<SyncMessage<T>> OnReject { get; private set; }
 
     public SyncService(string endpoint)
     {
         Console.WriteLine($"Building Sync connection at {endpoint}");
         connection = BuildHubConnection(endpoint);
 
+        InitializeEvents();
+
+        connection.Closed += async (error) =>
+        {
+            await Task.Delay(5000);
+            await Connect();
+        };
+
         this.endpoint = endpoint;
         Groups = new();
-    }
-
-    protected virtual HubConnection BuildHubConnection(string endpoint) =>
-        new HubConnectionBuilder()
-            .WithUrl(endpoint)
-            .WithAutomaticReconnect()
-            .Build();
-
-    public async Task EnsureConnection()
-    {
-        if (connection.State != HubConnectionState.Connected)
-            await Connect();
+        token = new();
     }
 
     public async Task Connect()
     {
-        if (connection is not null)
+        if (connection.State != HubConnectionState.Connected)
         {
-            Console.WriteLine("Registering Sync events");
-            RegisterEvents();
-            Console.WriteLine($"Connecting to {endpoint}");
-            await connection.StartAsync();
+            while (true)
+            {
+                try
+                {
+                    Console.WriteLine($"Connecting to {endpoint}");
+                    await connection.StartAsync(token);
+                    return;
+                }
+                catch when (token.IsCancellationRequested)
+                {
+                    return;
+                }
+                catch (Exception ex)
+                {
+                    Console.WriteLine($"Failed to connect to {endpoint}");
+                    Console.WriteLine(ex.Message);
+                    await Task.Delay(5000);
+                }
+            }
         }
     }
 
@@ -62,61 +76,68 @@ public abstract class SyncService<T> : ISyncService<T>
 
     public async Task Push(SyncMessage<T> message)
     {
-        message.Action = SyncAction.Push;
+        message.Action = SyncActionType.Push;
         await connection.InvokeAsync("SendPush", message);
     }
 
     public async Task Notify(SyncMessage<T> message)
     {
-        message.Action = SyncAction.Notify;
+        message.Action = SyncActionType.Notify;
         await connection.InvokeAsync("SendNotify", message);
     }
 
     public async Task Complete(SyncMessage<T> message)
     {
-        message.Action = SyncAction.Complete;
+        message.Action = SyncActionType.Complete;
         await connection.InvokeAsync("SendComplete", message);
     }
 
     public async Task Return(SyncMessage<T> message)
     {
-        message.Action = SyncAction.Return;
+        message.Action = SyncActionType.Return;
         await connection.InvokeAsync("SendReturn", message);
     }
 
     public async Task Reject(SyncMessage<T> message)
     {
-        message.Action = SyncAction.Reject;
+        message.Action = SyncActionType.Reject;
         await connection.InvokeAsync("SendReject", message);
     }
 
-    void RegisterEvents()
+    protected virtual HubConnection BuildHubConnection(string endpoint) =>
+        new HubConnectionBuilder()
+            .WithUrl(endpoint)
+            .WithAutomaticReconnect()
+            .Build();
+
+    protected void InitializeEvents()
     {
-        if (OnRegistered is not null)
-            connection.On("Registered", OnRegistered);
-
-        if (OnPush is not null)
-            connection.On("Push", OnPush);
-
-        if (OnNotify is not null)
-            connection.On("Notify", OnNotify);
-
-        if (OnComplete is not null)
-            connection.On("Complete", OnComplete);
-
-        if (OnReturn is not null)
-            connection.On("Return", OnReturn);
-
-        if (OnReject is not null)
-            connection.On("Reject", OnReject);
+        OnRegistered = new("Registered", connection);
+        OnPush = new("Push", connection);
+        OnNotify = new("Notify", connection);
+        OnComplete = new("Complete", connection);
+        OnReturn = new("Return", connection);
+        OnReject = new("Reject", connection);
     }
 
     public async ValueTask DisposeAsync()
     {
+        DisposeEvents();
+
         await DisposeConnection()
             .ConfigureAwait(false);
 
         GC.SuppressFinalize(this);
+    }
+
+    protected void DisposeEvents()
+    {
+        OnRegistered?.Dispose();
+        OnPush?.Dispose();
+        OnNotify?.Dispose();
+        OnComplete?.Dispose();
+        OnReturn?.Dispose();
+        OnReject?.Dispose();
     }
 
     protected async ValueTask DisposeConnection()

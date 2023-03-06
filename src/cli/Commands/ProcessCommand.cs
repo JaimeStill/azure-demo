@@ -36,12 +36,12 @@ public class ProcessCommand : CliCommand
         bool exit = false;
         await using ProcessorClient processor = new(sync);
 
-        processor.OnComplete = async (SyncMessage<Package> message) =>
+        processor.OnComplete.Set(async (SyncMessage<Package> message) =>
         {
             Console.WriteLine(message.Message);
             await processor.Leave(message.Key);
             exit = true;
-        };
+        });
 
         Console.WriteLine($"Generating {intent.ToActionString()} Package");
         Package package = GeneratePackage(intent);

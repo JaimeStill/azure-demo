@@ -10,7 +10,7 @@ public class ProcessorService : SyncService<Package>
 
     public async Task<bool> SendPackage(Package package)
     {
-        await EnsureConnection();
+        await Connect();
 
         await Join(package.Key);
 
@@ -19,7 +19,6 @@ public class ProcessorService : SyncService<Package>
             Id = Guid.NewGuid(),
             Key = package.Key,
             Data = package,
-            Action = SyncAction.Push,
             Message = $"Initializing Package {package.Name} for processing"
         };
 
