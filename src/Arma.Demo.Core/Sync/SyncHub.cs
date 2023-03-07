@@ -57,16 +57,19 @@ public abstract class SyncHub<T> : Hub<ISyncHub<T>>
     {
         Console.WriteLine($"Initialization message received: {message.Message}");
         Console.WriteLine($"Message key: {message.Key}");
-        Console.WriteLine($"Service Group: {groups.ServiceGroup.Key}");
 
         await Clients
             .OthersInGroup(message.Key.ToString())
             .Push(message);
 
         if (groups.ServiceGroup?.Key is not null)
+        {
+            Console.WriteLine($"Service Group: {groups.ServiceGroup.Key}");
+
             await Clients
                 .Groups(groups.ServiceGroup.Key.ToString())
                 .Push(message);
+        }
 
         if (groups.ListenerGroup?.Key is not null)
             await Clients

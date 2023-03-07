@@ -207,6 +207,11 @@ az acr build \
     --image $coreApi \
     ../src/$coreApi
 
+az acr build \
+    --registry $acr \
+    --image $coreSpa \
+    ../src/$coreSpa
+
 # App Plan
 az appservice plan create \
     --name $appPlan \
@@ -239,6 +244,14 @@ az webapp create \
     --docker-registry-server-password $ACR_PW \
     --deployment-container-image-name $acr.azurecr.io/$coreApi:latest
 
+az webapp create \
+    --name $coreSpa \
+    --plan $appPlan \
+    --resource-group $rg \
+    --docker-registry-server-user $ACR_ADMIN \
+    --docker-registry-server-password $ACR_PW \
+    --deployment-container-image-name $acr.azurecr.io/$coreSpa:latest
+
 # Configure Continuous Deployment
 az webapp deployment container config \
     --resource-group $rg \
@@ -253,6 +266,11 @@ az webapp deployment container config \
 az webapp deployment container config \
     --resource-group $rg \
     --name $coreApi \
+    --enable-cd true
+
+az webapp deployment container config \
+    --resource-group $rg \
+    --name $coreSpa \
     --enable-cd true
 
 # Configure ACR CD Webhooks
@@ -277,6 +295,13 @@ CORE_WEBHOOK=$(az webapp deployment container show-cd-url \
     --output tsv \
 | tr -d '\r')
 
+SPA_WEBHOOK=$(az webapp deployment container show-cd-url \
+    --resource-group $rg \
+    --name $coreSpa \
+    --query "CI_CD_URL" \
+    --output tsv \
+| tr -d '\r')
+
 az acr webhook create \
     --resource-group $rg \
     --registry $acr \
@@ -294,8 +319,15 @@ az acr webhook create \
 az acr webhook create \
     --resource-group $rg \
     --registry $acr \
-    --name $coreHook \
+    --name $apiHook \
     --uri $CORE_WEBHOOK \
+    --actions push
+
+az acr webhook create \
+    --resource-group $rg \
+    --registry $acr \
+    --name $spaHook \
+    --uri $SPA_WEBHOOK \
     --actions push
 
 # Add Key Vault to App Service settings
