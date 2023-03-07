@@ -1,5 +1,6 @@
 using Arma.Demo.Core.Middleware;
 using Arma.Demo.Core.Sync;
+using SyncServer;
 using SyncServer.Hubs;
 
 var builder = WebApplication.CreateBuilder(args);
@@ -7,9 +8,13 @@ var builder = WebApplication.CreateBuilder(args);
 // Add services to the container.
 builder.Services.AddCors(options =>
     options.AddDefaultPolicy(policy =>
-        policy.AllowAnyOrigin()
-              .AllowAnyMethod()
-              .AllowAnyHeader()
+        policy
+        .AllowAnyHeader()
+        .AllowAnyMethod()
+        .AllowCredentials()
+        .WithOrigins(
+            builder.Configuration.GetConfigArray("CorsOrigins")
+        )
     )
 );
 
@@ -22,3 +27,4 @@ app.UseCors();
 app.MapHubs();
 
 app.Run();
+
