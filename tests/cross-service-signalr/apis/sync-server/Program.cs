@@ -4,12 +4,24 @@ using SyncServer.Hubs;
 
 var builder = WebApplication.CreateBuilder(args);
 
+string[] origins = builder
+    .Configuration
+    .GetSection("CorsOrigins")
+    .Get<string[]>()
+?? new string[] {
+    "http://localhost:4200",
+    "http://localhost:5000",
+    "http://localhost:5001"
+};
+
 // Add services to the container.
 builder.Services.AddCors(options =>
     options.AddDefaultPolicy(policy =>
-        policy.AllowAnyOrigin()
-              .AllowAnyMethod()
-              .AllowAnyHeader()
+        policy
+        .AllowAnyHeader()
+        .AllowAnyMethod()
+        .AllowCredentials()
+        .WithOrigins(origins)
     )
 );
 

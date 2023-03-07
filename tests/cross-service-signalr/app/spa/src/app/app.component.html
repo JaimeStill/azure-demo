@@ -1,0 +1,10 @@
+<h1>SignalR Client Test</h1>
+<hr />
+<h3>Client Output - State: {{client.state()}}</h3>
+<ng-template #loading>
+    <p [style.margin.px]="8">Connecting to Sync Server...</p>
+</ng-template>
+<ng-container *ngIf="client.connected else loading">
+    <p *ngFor="let message of client.messages"
+       [style.margin.px]="8">{{message}}</p>
+</ng-container>
