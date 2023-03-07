@@ -62,7 +62,7 @@ If you look at the output from the servers after executing the CLI command, you'
 
 **Processor Server**
 
-![image](https://user-images.githubusercontent.com/14102723/222831110-59c71384-4f24-43d2-9a94-86f9d8c3ea5b.png)
+![image](https://user-images.githubusercontent.com/14102723/223285387-6d3ab6f0-0d32-405a-97db-280e74ba29db.png)
 
 **Sync Server**
 
