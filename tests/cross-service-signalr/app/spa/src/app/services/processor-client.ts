@@ -12,11 +12,11 @@ import {
 })
 export class ProcessorClient extends SyncClient<Package> {
     private initEvents = () => {
-        this.onPush = this.output;
-        this.onNotify = this.output;
-        this.onComplete = this.output;
-        this.onReturn = this.output;
-        this.onReject = this.output;
+        this.onPush.set(this.output);
+        this.onNotify.set(this.output);
+        this.onComplete.set(this.output);
+        this.onReturn.set(this.output);
+        this.onReject.set(this.output);
     }
 
     constructor() {
@@ -25,7 +25,7 @@ export class ProcessorClient extends SyncClient<Package> {
     }
 
     output = (message: SyncMessage<Package>) => {
-        console.log(`${SyncActionType[message.action]}: {message.message}`);
-        this.messages.push(`${SyncActionType[message.action]}: {message.message}`);
+        console.log(`${SyncActionType[message.action]}: ${message.message}`);
+        this.messages.push(`${SyncActionType[message.action]}: ${message.message}`);
     }
 }

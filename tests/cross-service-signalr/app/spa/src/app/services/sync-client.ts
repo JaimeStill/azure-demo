@@ -1,46 +1,67 @@
 import {
     HubConnection,
     HubConnectionBuilder,
-    HubConnectionState,
     LogLevel
 } from '@microsoft/signalr';
 
-import { SyncMessage } from '../models';
+import {
+    SyncAction,
+    SyncMessage
+} from '../models';
+
 import { v4 as uuid } from 'uuid';
 
 export abstract class SyncClient<T> {
     protected key: string;
-    protected connection: HubConnection;
+    protected client: HubConnection;
 
+    connected: boolean = false;
     endpoint: string;
     messages: string[] = new Array<string>();
 
-    onRegistered: (guid: string) => void = (guid: string) => this.key = guid;
-    onPush: (message: SyncMessage<T>) => void;
-    onNotify: (message: SyncMessage<T>) => void;
-    onComplete: (message: SyncMessage<T>) => void;
-    onReturn: (message: SyncMessage<T>) => void;
-    onReject: (message: SyncMessage<T>) => void;
+    // onRegistered: (guid: string) => void = (guid: string) => {
+    //     this.key = guid;
+    // }
 
-    protected registerEvents = () => {
-        this.connection.onclose(async () => await this.start());
+    // onPush: (message: SyncMessage<T>) => void;
+    // onNotify: (message: SyncMessage<T>) => void;
+    // onComplete: (message: SyncMessage<T>) => void;
+    // onReturn: (message: SyncMessage<T>) => void;
+    // onReject: (message: SyncMessage<T>) => void;
 
-        this.connection.on("Registered", this.onRegistered);
-        this.connection.on("Push", this.onPush);
-        this.connection.on("Notify", this.onNotify);
-        this.connection.on("Complete", this.onComplete);
-        this.connection.on("Return", this.onReturn);
-        this.connection.on("Reject", this.onReject);
+    onRegistered: SyncAction;
+    onPush: SyncAction;
+    onNotify: SyncAction;
+    onComplete: SyncAction;
+    onReturn: SyncAction;
+    onReject: SyncAction;
+
+    protected initializeEvents = () => {
+        this.client.onclose(async () => {
+            this.connected = false;
+            await this.start();
+        });
+
+        this.onRegistered = new SyncAction("Registered", this.client);
+        this.onPush = new SyncAction("Push", this.client);
+        this.onNotify = new SyncAction("Notify", this.client);
+        this.onComplete = new SyncAction("Complete", this.client);
+        this.onReturn = new SyncAction("Return", this.client);
+        this.onReject = new SyncAction("Reject", this.client);
+
+        this.onRegistered.set((guid: string) => {
+            this.key = guid;
+        });
     }
 
     protected initialize = () => {
-        this.connection = new HubConnectionBuilder()
+        this.client = new HubConnectionBuilder()
             .withUrl(this.endpoint)
             .configureLogging(LogLevel.Information)
             .withAutomaticReconnect()
             .build();
 
-        this.registerEvents();
+        this.initializeEvents();
     }
 
     constructor(endpoint: string) {
@@ -48,18 +69,19 @@ export abstract class SyncClient<T> {
         this.initialize();
     }
 
-    state = (): HubConnectionState => this.connection.state;
+    state = () => this.client.state;
 
     start = async () => {
         try {
             this.messages.push(`Connecting to ${this.endpoint}`);
-            await this.connection.start();
+            await this.client.start();
             this.messages.push(`Connected to ${this.endpoint}`);
+            this.connected = true;
         } catch (err) {
             console.log(err);
             setTimeout(this.start, 5000);
         }
     }
 
-    register = async () => await this.connection.invoke("RegisterListener", uuid())
+    register = async () => await this.client.invoke("registerListener", uuid())
 }
