@@ -1,2 +1,17 @@
-<h1>Azure Demo</h1>
-<hr />
+<div>
+    <h1>Azure Demo</h1>
+    <hr />
+    <div class="action-row">
+        <button (click)="secretSvc.get()">Get Secret</button>
+        <button (click)="errorSvc.get()">Simulate Error</button>
+        <select [value]="intent"
+                (change)="setIntent($event.target.value)">
+            <option *ngFor="let i of intents"
+                    [value]="i">{{i}}</option>
+        </select>
+        <button (click)="submit()">Staff Package</button>
+        <span class="flex"></span>
+        <h3 [style.margin.px]="4">Socket Status: {{processorSvc.state()}}</h3>
+    </div>
+</div>
+<console></console>

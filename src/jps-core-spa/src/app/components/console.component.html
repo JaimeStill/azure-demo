@@ -1,0 +1,9 @@
+<div class="console"
+     #console
+     [style.height.px]="height">
+    <ng-container *ngIf="consoleSvc.messages?.length > 0">
+        <pre *ngFor="let message of consoleSvc.messages"
+             class="message"
+             [ngClass]="message.color">{{message.message}}</pre>
+    </ng-container>
+</div>

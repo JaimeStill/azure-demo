@@ -23,6 +23,10 @@ builder.Services.AddCors(options =>
               .AllowAnyHeader()
               .AllowCredentials()
               .WithOrigins(origins)
+              .WithExposedHeaders(
+                "Content-Disposition",
+                "Access-Control-Allow-Origin"
+              )
     )
 );
 

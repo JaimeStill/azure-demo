@@ -330,8 +330,13 @@ az acr webhook create \
     --uri $SPA_WEBHOOK \
     --actions push
 
-# Add Key Vault to App Service settings
+# Configure CORS for Sync server
+az webapp cors add \
+    --resource-group $rg \
+    --name $sync \
+    --allowed-origins "http://localhost:4200" "https://$coreSpa.azurewebsites.net"
 
+# Add Key Vault to App Service settings
 az webapp config appsettings set \
     --resource-group $rg \
     --name $coreApi \

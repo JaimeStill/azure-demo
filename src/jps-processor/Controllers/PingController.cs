@@ -1,3 +1,4 @@
+using Arma.Demo.Core;
 using Microsoft.AspNetCore.Http.Extensions;
 using Microsoft.AspNetCore.Mvc;
 
@@ -6,6 +7,9 @@ namespace Processor.Controllers;
 [Route("api/[controller]")]
 public class PingController : Controller
 {
+    [HttpGet]
     public IActionResult Get() =>
-        Ok(HttpContext.Request.GetDisplayUrl());
+        Json(
+            new ApiResult<string>(HttpContext.Request.GetDisplayUrl())
+        );
 }
