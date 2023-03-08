@@ -43,6 +43,13 @@ public class ProcessCommand : CliCommand
             exit = true;
         });
 
+        processor.OnReject.Set(async (SyncMessage<Package> message) =>
+        {
+            Console.WriteLine(message.Message);
+            await processor.Leave(message.Key);
+            exit = true;
+        });
+
         Console.WriteLine($"Generating {intent.ToActionString()} Package");
         Package package = GeneratePackage(intent);
 
@@ -75,7 +82,8 @@ public class ProcessCommand : CliCommand
         new()
         {
             Key = Guid.NewGuid(),
-            Name = "Approval Package",
+            Name = "CLI Approval Package",
+            Intent = Intent.Approve,
             Resources = GenerateResources()
         };
 
@@ -83,7 +91,8 @@ public class ProcessCommand : CliCommand
         new()
         {
             Key = Guid.NewGuid(),
-            Name = "Acquisition Package",
+            Name = "CLI Acquisition Package",
+            Intent = Intent.Acquire,
             Resources = GenerateResources()
         };
 
@@ -91,7 +100,8 @@ public class ProcessCommand : CliCommand
         new()
         {
             Key = Guid.NewGuid(),
-            Name = "Transfer Package",
+            Name = "CLI Transfer Package",
+            Intent = Intent.Transfer,
             Resources = GenerateResources()
         };
 
@@ -99,7 +109,8 @@ public class ProcessCommand : CliCommand
         new()
         {
             Key = Guid.NewGuid(),
-            Name = "Destruction Package",
+            Name = "CLI Destruction Package",
+            Intent = Intent.Destroy,
             Resources = GenerateResources()
         };
 

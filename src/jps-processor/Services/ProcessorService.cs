@@ -3,6 +3,18 @@ using Arma.Demo.Core.Sync;
 using Microsoft.AspNetCore.SignalR.Client;
 
 namespace Processor.Services;
+public class ProcessorStatus
+{
+    public string? ConnectionId { get; private set; }
+    public string State { get; private set; }
+
+    public ProcessorStatus(HubConnection client)
+    {
+        ConnectionId = client.ConnectionId;
+        State = client.State.ToString();
+    }
+}
+
 public class ProcessorService : SyncService<Package>
 {
     Guid? Key { get; set; }
@@ -19,6 +31,8 @@ public class ProcessorService : SyncService<Package>
 
         OnPush.Set(ProcessPackage);
     }
+
+    public ProcessorStatus GetStatus() => new(connection);
 
     public static async Task Initialize(IServiceProvider services)
     {
@@ -59,24 +73,39 @@ public class ProcessorService : SyncService<Package>
         Console.WriteLine(message.Message);
         await Notify(message);
 
-        foreach (ProcessTask task in process.Tasks)
+        for (int i = 0; i < process.Tasks.Count; i++)
         {
+            ProcessTask task = process.Tasks[i];
+
             message.Message = $"Current step: {task.Name}";
             Console.WriteLine(message.Message);
             await Notify(message);
 
-            await Task.Delay(task.Duration);
+            await Task.Delay (task.Duration);
 
-            message.Message = $"Package {message.Data.Name} was successfully appoved by {task.Section}";
+            if (i == process.Tasks.Count - 1 && message.Data.Intent == Intent.Destroy)
+                message.Message = $"Package {message.Data.Name} was rejected by {task.Section}";
+            else
+                message.Message = $"Package {message.Data.Name} was successfully appoved by {task.Section}";
+
             Console.WriteLine(message.Message);
             await Notify(message);
         }
 
         await Task.Delay(300);
 
-        message.Message = $"Package {message.Data.Name} was successfully approved";
-        Console.WriteLine(message.Message);
-        await Complete(message);
+        if (message.Data.Intent == Intent.Destroy)
+        {
+            message.Message = $"Items in package {message.Data.Name} cannot be destroyed";
+            Console.WriteLine(message.Message);
+            await Reject(message);
+        }
+        else
+        {
+            message.Message = $"Package {message.Data.Name} was successfully approved";
+            Console.WriteLine(message.Message);
+            await Complete(message);
+        }
     }
 
     static Process GenerateProcess(Package package) => package.Intent switch

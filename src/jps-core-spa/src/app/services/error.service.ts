@@ -1,22 +1,21 @@
 import { Injectable } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
-import { BehaviorSubject } from 'rxjs';
 import { ErrorResult } from '../models';
 import { environment } from '../../environments/environment';
+import { ConsoleService } from './console.service';
 
 @Injectable({
     providedIn: 'root'
 })
 export class ErrorService {
-    private error = new BehaviorSubject<ErrorResult>(null);
-    error$ = this.error.asObservable();
-
     constructor(
+        private console: ConsoleService,
         private http: HttpClient
     ) { }
 
     get = () => this.http.get(`${environment.api}error`)
         .subscribe({
-            error: (err: ErrorResult) => this.error.next(err)
+            error: (err: any) =>
+                this.console.error(err.error as ErrorResult)
         });
 }

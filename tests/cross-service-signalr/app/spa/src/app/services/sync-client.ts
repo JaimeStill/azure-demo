@@ -19,16 +19,6 @@ export abstract class SyncClient<T> {
     endpoint: string;
     messages: string[] = new Array<string>();
 
-    // onRegistered: (guid: string) => void = (guid: string) => {
-    //     this.key = guid;
-    // }
-
-    // onPush: (message: SyncMessage<T>) => void;
-    // onNotify: (message: SyncMessage<T>) => void;
-    // onComplete: (message: SyncMessage<T>) => void;
-    // onReturn: (message: SyncMessage<T>) => void;
-    // onReject: (message: SyncMessage<T>) => void;
-
     onRegistered: SyncAction;
     onPush: SyncAction;
     onNotify: SyncAction;
