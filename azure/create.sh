@@ -252,6 +252,27 @@ az webapp create \
     --docker-registry-server-password $ACR_PW \
     --deployment-container-image-name $acr.azurecr.io/$coreSpa:latest
 
+# Configure Web Server Logging
+az webapp log config \
+    --name $sync \
+    --resource-group $rg \
+    --web-server-logging filesystem
+
+az webapp log config \
+    --name $processor \
+    --resource-group $rg \
+    --web-server-logging filesystem
+    
+az webapp log config \
+    --name $coreApi \
+    --resource-group $rg \
+    --web-server-logging filesystem
+    
+az webapp log config \
+    --name $coreSpa \
+    --resource-group $rg \
+    --web-server-logging filesystem
+
 # Configure Continuous Deployment
 az webapp deployment container config \
     --resource-group $rg \

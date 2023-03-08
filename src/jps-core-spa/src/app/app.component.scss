@@ -1,5 +1,13 @@
+div.grid {
+    display: grid;
+    grid-template-rows: auto minmax(0, 1fr);
+    height: 100%;
+    padding: 8px
+}
+
 .action-row {
     display: flex;
+    padding: 4px;
 }
 
 .action-row * {
@@ -8,4 +16,21 @@
 
 .flex {
     flex: 1 1 auto;
+}
+
+@media (max-width: 650px) {
+    .action-row {
+        display: grid;
+        grid-template-columns: repeat(2, 1fr);
+
+        span {
+            display: none;
+        }
+
+        h3 {
+            grid-column-start: 1;
+            grid-column-end: 3;
+            justify-self: center;
+        }
+    }
 }
