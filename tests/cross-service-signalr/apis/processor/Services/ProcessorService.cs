@@ -67,7 +67,7 @@ public class ProcessorService : SyncService<Package>
 
             await Task.Delay(task.Duration);
 
-            message.Message = $"Package {message.Data.Name} was successfully appoved by {task.Section}";
+            message.Message = $"Package {message.Data.Name} was successfully approved by {task.Section}";
             Console.WriteLine(message.Message);
             await Notify(message);
         }

@@ -86,7 +86,7 @@ public class ProcessorService : SyncService<Package>
             if (i == process.Tasks.Count - 1 && message.Data.Intent == Intent.Destroy)
                 message.Message = $"Package {message.Data.Name} was rejected by {task.Section}";
             else
-                message.Message = $"Package {message.Data.Name} was successfully appoved by {task.Section}";
+                message.Message = $"Package {message.Data.Name} was successfully approved by {task.Section}";
 
             Console.WriteLine(message.Message);
             await Notify(message);
