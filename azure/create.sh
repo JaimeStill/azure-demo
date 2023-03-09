@@ -357,6 +357,15 @@ az webapp cors add \
     --name $sync \
     --allowed-origins "http://localhost:4200" "https://$coreSpa.azurewebsites.net"
 
+# Enable Access-Control-Allow-Credentials in CORS for Sync server
+az resource update \
+    --name web \
+    --resource-group $rg \
+    --namespace Microsoft.Web \
+    --resource-type config \
+    --parent sites/$sync \
+    --set properties.cors.supportCredentials=true
+
 # Add Key Vault to App Service settings
 az webapp config appsettings set \
     --resource-group $rg \
