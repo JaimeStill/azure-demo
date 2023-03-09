@@ -35,6 +35,8 @@ public class ProcessorConnection : SyncConnection<Package>
             Key = Guid.NewGuid();
             await Connect();
             Console.WriteLine($"Registering service with key {Key}");
+
+            // Should pass a SyncRegistration
             await connection.InvokeAsync("RegisterService", Key);
         }
     }

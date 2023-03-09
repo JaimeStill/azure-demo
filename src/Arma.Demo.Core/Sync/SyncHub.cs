@@ -33,10 +33,10 @@ public abstract class SyncHub<T> : Hub<ISyncHub<T>>
         await Clients.Caller.Registered(key);
     }
 
-    public async Task RegisterService(Guid key)
+    public async Task RegisterService(SyncRegistration registration)
     {
         Console.WriteLine($"Registering service with provided key {key}");
-        key = await groups.InitializeService(key, Context.ConnectionId, Groups);
+        key = await groups.InitializeService(registration, Groups);
         Console.WriteLine($"Service registered at {key}");
         await Clients.Caller.Registered(key);
     }
