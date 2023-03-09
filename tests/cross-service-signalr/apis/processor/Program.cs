@@ -14,11 +14,11 @@ builder.Services.AddCors(options =>
     )
 );
 
-builder.Services.AddSyncService<ProcessorService, Package>();
+builder.Services.AddSyncConnection<ProcessorConnection, Package>();
 
 var app = builder.Build();
 
-await ProcessorService.Initialize(app.Services);
+await ProcessorConnection.Initialize(app.Services);
 
 app.UseJsonExceptionHandler();
 app.UseCors();

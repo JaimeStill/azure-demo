@@ -3,11 +3,11 @@ using Arma.Demo.Core.Sync;
 using Microsoft.AspNetCore.SignalR.Client;
 
 namespace Processor.Services;
-public class ProcessorService : SyncService<Package>
+public class ProcessorConnection : SyncConnection<Package>
 {
     Guid? Key { get; set; }
 
-    public ProcessorService(IConfiguration config) : base(
+    public ProcessorConnection(IConfiguration config) : base(
         config.GetValue<string>("SyncServer:ProcessorUrl") ?? "http://localhost:5100/processor"
     )
     {
@@ -22,7 +22,7 @@ public class ProcessorService : SyncService<Package>
 
     public static async Task Initialize(IServiceProvider services)
     {
-        ProcessorService? processor = services.GetService<ProcessorService>();
+        ProcessorConnection? processor = services.GetService<ProcessorConnection>();
 
         if (processor is not null)
             await processor.Register();

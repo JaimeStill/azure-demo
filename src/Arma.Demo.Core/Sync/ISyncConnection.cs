@@ -1,5 +1,5 @@
 namespace Arma.Demo.Core.Sync;
-public interface ISyncService<T> : IAsyncDisposable
+public interface ISyncConnection<T> : IAsyncDisposable
 {
     Task Connect();
     Task Join(Guid key);

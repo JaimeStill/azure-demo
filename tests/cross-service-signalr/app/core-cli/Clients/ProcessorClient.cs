@@ -2,7 +2,7 @@ using Arma.Demo.Core.Processing;
 using Arma.Demo.Core.Sync;
 
 namespace CoreCli.Clients;
-public class ProcessorClient : SyncService<Package>
+public class ProcessorClient : SyncConnection<Package>
 {
     public ProcessorClient(string endpoint) : base(endpoint)
     {

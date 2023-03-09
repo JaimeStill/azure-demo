@@ -7,9 +7,9 @@ namespace Core.Controllers;
 [Route("api/[controller]")]
 public class ProcessController : Controller
 {
-    readonly ProcessorService processor;
+    readonly ProcessorConnection processor;
 
-    public ProcessController(ProcessorService processor)
+    public ProcessController(ProcessorConnection processor)
     {
         this.processor = processor;
     }
