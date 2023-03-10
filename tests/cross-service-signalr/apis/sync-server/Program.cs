@@ -26,9 +26,17 @@ builder.Services.AddCors(options =>
 );
 
 builder.Services.AddSignalR();
-builder.Services.AddSyncGroupProvider();
+builder.Services.AddSyncServiceManager();
 
 var app = builder.Build();
+
+app.Services.RegisterSyncServices(new List<SyncService>()
+{
+    new("Processor", "http://localhost:5000/api/ping", typeof(ProcessorHub))
+});
+
+await app.Services.InitializeSyncServiceManager();
+
 app.UseJsonExceptionHandler();
 app.UseCors();
 app.MapHubs();

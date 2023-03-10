@@ -4,40 +4,47 @@ namespace Arma.Demo.Core.Sync;
 public class SyncService
 {
     public Guid Key { get; private set; }
+    public string ConnectionId { get; private set; }
     public string Name { get; private set; }
     public string Endpoint { get; private set; }
-    public string Hub { get; private set; }    
+    public Type Hub { get; private set; }
     public SyncGroup Listeners { get; private set; }
     public List<SyncGroup> SyncGroups { get; private set; }
-    public List<string> ServiceConnections { get; private set; }
 
-    public SyncService(SyncRegistration registration)
+    public SyncService(string name, string endpoint, Type hub)
     {
-        Key = registration.Key;
-        Name = registration.Name;
-        Endpoint = registration.Endpoint;
-        Hub = registration.Hub;
+        Key = Guid.NewGuid();
+        Name = name;
+        Endpoint = endpoint;
+        Hub = hub;
 
         Listeners = new(Guid.NewGuid(), new());
 
-        SyncGroups = new();        
-        ServiceConnections = new() { registration.ConnectionId };
+        SyncGroups = new();
     }
 
-    public async Task AddService(string connectionId, IGroupManager groups)
+    public async Task<bool> Ping()
     {
-        if (!ServiceConnections.Contains(connectionId))
-            ServiceConnections.Add(connectionId);
-
-        await groups.AddToGroupAsync(connectionId, Key.ToString());
+        try
+        {
+            HttpClient client = new();
+            HttpResponseMessage result = await client.GetAsync(Endpoint);
+            return result.IsSuccessStatusCode;
+        }
+        catch
+        {
+            return false;
+        }
     }
 
-    public async Task RemoveService(string connectionId, IGroupManager groups)
+    public void SetConnection(string connectionId)
     {
-        if (ServiceConnections.Contains(connectionId))
-            ServiceConnections.Remove(connectionId);
+        ConnectionId = connectionId;
+    }
 
-        await groups.AddToGroupAsync(connectionId, Key.ToString());
+    public void ClearConnection()
+    {
+        ConnectionId = null;
     }
 
     public async Task AddListener(string connectionId, IGroupManager groups)
@@ -69,7 +76,7 @@ public class SyncService
             );
         else
             if (!group.Connections.Contains(connectionId))
-                group.Connections.Add(connectionId);
+            group.Connections.Add(connectionId);
 
         await groups.AddToGroupAsync(connectionId, key.ToString());
     }
@@ -77,7 +84,7 @@ public class SyncService
     public async Task RemoveFromGroup(Guid key, string connectionId, IGroupManager groups)
     {
         SyncGroup group = SyncGroups.FirstOrDefault(x => x.Key == key);
-        
+
         if (group is not null)
         {
             if (group.Connections.Contains(connectionId))

@@ -9,6 +9,7 @@ public abstract class SyncConnection<T> : ISyncConnection<T>
 
     protected List<Guid> Groups { get; set; }
 
+    public bool Available { get; private set; }
     public SyncEvent<Guid> OnRegistered { get; private set; }
     public SyncEvent<SyncMessage<T>> OnPush { get; private set; }
     public SyncEvent<SyncMessage<T>> OnNotify { get; private set; }
@@ -28,6 +29,9 @@ public abstract class SyncConnection<T> : ISyncConnection<T>
             await Task.Delay(5000);
             await Connect();
         };
+
+        connection.On("Available", () => Available = true);
+        connection.On("Disconnected", () => Available = false);
 
         this.endpoint = endpoint;
         Groups = new();

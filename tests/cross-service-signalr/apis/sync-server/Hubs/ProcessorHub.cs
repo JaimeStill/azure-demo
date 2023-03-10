@@ -4,6 +4,6 @@ using Arma.Demo.Core.Sync;
 namespace SyncServer.Hubs;
 public class ProcessorHub : SyncHub<Package>
 {
-    public ProcessorHub(SyncGroupProvider groups)
+    public ProcessorHub(SyncServiceManager groups)
         : base(groups) { }
 }
