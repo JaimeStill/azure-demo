@@ -8,6 +8,9 @@ Demonstrate:
 * [SPA to API](https://github.com/JaimeStill/learning-azure/tree/main/exercises/azure-ad/04-spa-to-api)
 
 ```bash
+# install uuidgen
+sudo apt install uuid-runtime
+
 # install in one line
 curl -sL https://aka.ms/InstallAzureCLIDeb | sudo bash
 
