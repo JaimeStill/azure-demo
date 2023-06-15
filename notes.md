@@ -8,6 +8,15 @@ Demonstrate:
 * [SPA to API](https://github.com/JaimeStill/learning-azure/tree/main/exercises/azure-ad/04-spa-to-api)
 
 ```bash
+# install uuidgen
+sudo apt install uuid-runtime
+
+# install in one line
+curl -sL https://aka.ms/InstallAzureCLIDeb | sudo bash
+
+# login to azure subscription
+az login --use-device-code
+
 # build the image
 docker build -t {tag} .
 
@@ -28,6 +37,9 @@ docker rm {container}
 
 # remove image
 docker rmi {image}
+
+# download install script to inspect (if curious)
+curl -sL https://aka.ms/InstallAzureCLIDeb --output install-azure-cli.bash
 ```
 
 ## References
