@@ -2,9 +2,9 @@ using Arma.Demo.Core.Processing;
 using Arma.Demo.Core.Sync;
 
 namespace Core.Services;
-public class ProcessorService : SyncService<Package>
+public class ProcessorConnection : SyncConnection<Package>
 {
-    public ProcessorService(IConfiguration config) : base(
+    public ProcessorConnection(IConfiguration config) : base(
         config.GetValue<string>("SyncServer:ProcessorUrl") ?? "http://localhost:5100/processor"
     ) { }
 

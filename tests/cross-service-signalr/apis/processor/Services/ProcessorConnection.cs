@@ -3,26 +3,19 @@ using Arma.Demo.Core.Sync;
 using Microsoft.AspNetCore.SignalR.Client;
 
 namespace Processor.Services;
-public class ProcessorService : SyncService<Package>
+public class ProcessorConnection : SyncConnection<Package>
 {
-    Guid? Key { get; set; }
-
-    public ProcessorService(IConfiguration config) : base(
+    public ProcessorConnection(IConfiguration config) : base(
         config.GetValue<string>("SyncServer:ProcessorUrl") ?? "http://localhost:5100/processor"
     )
     {
-        OnRegistered.Set((Guid key) =>
-        {
-            Console.WriteLine($"Service successfully registered at {key}");
-            Key = key;
-        });
-
+        OnRegistered.Set((Guid key) => Console.WriteLine($"Service successfully registered"));
         OnPush.Set(ProcessPackage);
     }
 
     public static async Task Initialize(IServiceProvider services)
     {
-        ProcessorService? processor = services.GetService<ProcessorService>();
+        ProcessorConnection? processor = services.GetService<ProcessorConnection>();
 
         if (processor is not null)
             await processor.Register();
@@ -30,13 +23,9 @@ public class ProcessorService : SyncService<Package>
 
     public async Task Register()
     {
-        if (!Key.HasValue)
-        {
-            Key = Guid.NewGuid();
-            await Connect();
-            Console.WriteLine($"Registering service with key {Key}");
-            await connection.InvokeAsync("RegisterService", Key);
-        }
+        await Connect();
+        Console.WriteLine("Registering service");
+        await connection.InvokeAsync("RegisterService");
     }
 
     public async Task ProcessPackage(SyncMessage<Package> message)

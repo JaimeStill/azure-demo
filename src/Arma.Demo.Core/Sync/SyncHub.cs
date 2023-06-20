@@ -3,78 +3,96 @@ using Microsoft.AspNetCore.SignalR;
 namespace Arma.Demo.Core.Sync;
 public abstract class SyncHub<T> : Hub<ISyncHub<T>>
 {
-    readonly SyncGroupProvider groups;
+    readonly SyncService service;
+    ISyncHub<T> Listeners => Clients.Group(service.Listeners.Key.ToString());
 
-    public SyncHub(SyncGroupProvider groups)
+    public SyncHub(SyncServiceManager manager)
     {
-        this.groups = groups;
+        service = manager.GetService(GetType());
     }
 
     public override async Task OnDisconnectedAsync(Exception ex)
     {
-        List<Guid> keys = groups
-            .SyncGroups
-            .Where(x => x.Connections.Contains(Context.ConnectionId))
-            .Select(x => x.Key)
-            .Distinct()
-            .ToList();
+        if (Context.ConnectionId == service.ConnectionId)
+        {
+            await Clients.Others.Disconnected();
+            service.ClearConnection();
+        }
+        else
+        {
+            List<Guid> keys = service
+                .SyncGroups
+                .Where(x => x.Connections.Contains(Context.ConnectionId))
+                .Select(x => x.Key)
+                .Distinct()
+                .ToList();
 
-        foreach (Guid key in keys)
-            await groups.RemoveFromGroup(key, Context.ConnectionId, Groups);
+            foreach (Guid key in keys)
+                await service.RemoveFromGroup(key, Context.ConnectionId, Groups);
+
+            if (service.Listeners.Connections.Contains(Context.ConnectionId))
+                await service.RemoveListener(Context.ConnectionId, Groups);
+        }
 
         await base.OnDisconnectedAsync(ex);
     }
 
-    public async Task RegisterListener(Guid key)
+    public async Task RegisterListener()
     {
-        Console.WriteLine($"Registering listener with provided key {key}");
-        key = await groups.InitializeListener(key, Context.ConnectionId, Groups);
-        Console.WriteLine($"Listener registered at {key}");
-        await Clients.Caller.Registered(key);
+        Console.WriteLine($"Registering listener: {Context.ConnectionId}");
+        await service.AddListener(Context.ConnectionId, Groups);
+        Console.WriteLine($"Listener registered: {Context.ConnectionId}");
+        await Clients.Caller.FinalizeListener();
     }
 
-    public async Task RegisterService(Guid key)
+    public async Task RegisterService()
     {
-        Console.WriteLine($"Registering service with provided key {key}");
-        key = await groups.InitializeService(key, Context.ConnectionId, Groups);
-        Console.WriteLine($"Service registered at {key}");
-        await Clients.Caller.Registered(key);
+        if (string.IsNullOrEmpty(service.ConnectionId))
+        {
+            Console.WriteLine($"Registering service {service.Name} at {service.Endpoint}");
+            service.SetConnection(Context.ConnectionId);
+            Console.WriteLine($"Service successfully registered");
+            await Clients.All.Available();
+        }
     }
 
     public async Task Join(Guid key)
     {
         Console.WriteLine($"Client {Context.ConnectionId} is joining group {key}");
-        await groups.AddToGroup(key, Context.ConnectionId, Groups);
+        await service.AddToGroup(key, Context.ConnectionId, Groups);
     }
 
     public async Task Leave(Guid key)
     {
         Console.WriteLine($"Client {Context.ConnectionId} is leaving group {key}");
-        await groups.RemoveFromGroup(key, Context.ConnectionId, Groups);
+        await service.RemoveFromGroup(key, Context.ConnectionId, Groups);
     }
 
     public async Task SendPush(SyncMessage<T> message)
     {
-        Console.WriteLine($"Initialization message received: {message.Message}");
-        Console.WriteLine($"Message key: {message.Key}");
-
-        await Clients
-            .OthersInGroup(message.Key.ToString())
-            .Push(message);
-
-        if (groups.ServiceGroup?.Key is not null)
+        if (!string.IsNullOrEmpty(service.ConnectionId))
         {
-            Console.WriteLine($"Service Group: {groups.ServiceGroup.Key}");
+            Console.WriteLine($"Initialization message received: {message.Message}");
+            Console.WriteLine($"Message key: {message.Key}");
 
             await Clients
-                .Groups(groups.ServiceGroup.Key.ToString())
+                .OthersInGroup(message.Key.ToString())
                 .Push(message);
+
+            Console.WriteLine($"Pushing to Service {service.Name}");
+            await Clients
+                .Client(service.ConnectionId).Push(message);
+
+            await Listeners.Push(message);
         }
-
-        if (groups.ListenerGroup?.Key is not null)
-            await Clients
-                .Groups(groups.ListenerGroup.Key.ToString())
-                .Push(message);
+        else
+        {
+            message.Id = Guid.NewGuid();
+            message.Action = SyncActionType.Notify;
+            message.Message = $"Service {service.Name} is unavailable";
+            
+            await Clients.All.Notify(message);
+        }
     }
 
     public async Task SendNotify(SyncMessage<T> message)
@@ -86,10 +104,7 @@ public abstract class SyncHub<T> : Hub<ISyncHub<T>>
             .OthersInGroup(message.Key.ToString())
             .Notify(message);
 
-        if (groups.ListenerGroup?.Key is not null)
-            await Clients
-                .Groups(groups.ListenerGroup.Key.ToString())
-                .Notify(message);
+        await Listeners.Notify(message);
     }
 
     public async Task SendComplete(SyncMessage<T> message)
@@ -101,33 +116,24 @@ public abstract class SyncHub<T> : Hub<ISyncHub<T>>
             .OthersInGroup(message.Key.ToString())
             .Complete(message);
 
-        if (groups.ListenerGroup?.Key is not null)
-            await Clients
-                .Groups(groups.ListenerGroup.Key.ToString())
-                .Complete(message);
+        await Listeners.Complete(message);
     }
 
     public async Task SendReturn(SyncMessage<T> message)
     {
         await Clients
-            .OthersInGroup(message.Key.ToString())
-            .Return(message);
-
-        if (groups.ListenerGroup?.Key is not null)
-            await Clients
-                .Groups(groups.ListenerGroup.Key.ToString())
+                .OthersInGroup(message.Key.ToString())
                 .Return(message);
+
+        await Listeners.Return(message);
     }
 
     public async Task SendReject(SyncMessage<T> message)
     {
         await Clients
-            .OthersInGroup(message.Key.ToString())
-            .Reject(message);
-
-        if (groups.ListenerGroup?.Key is not null)
-            await Clients
-                .Groups(groups.ListenerGroup.Key.ToString())
+                .OthersInGroup(message.Key.ToString())
                 .Reject(message);
+
+        await Listeners.Reject(message);
     }
 }
